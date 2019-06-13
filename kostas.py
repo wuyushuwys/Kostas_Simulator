@@ -137,9 +137,9 @@ class Drone:
         in_cage = 0
         while in_cage is 0:
             self.home = [np.random.randint(max(self.corners[0])), np.random.randint(max(self.corners[1]))]
-            in_cage = self.check_boundaries()
+            in_cage = self.check_boundaries(is_setup=True)
         # self.home = np.array(home)
-        self.position = np.array(position)
+        self.position = self.home
         # self.orientation = orientation
         self.orientation = np.random.randint(360)
         self.speed = speed
@@ -153,7 +153,7 @@ class Drone:
         plt.plot(self.home[0], self.home[1],
                  'md', markersize=3, markeredgewidth=3, fillstyle='none')
 
-    def check_boundaries(self):
+    def check_boundaries(self, is_setup=False):
         """
         Checks if a drone is within the range of the cage of KRI
         """
@@ -163,16 +163,25 @@ class Drone:
         m3 = (self.corners[1][3] - self.corners[1][2]) / (self.corners[0][3] - self.corners[0][2])
         m4 = (self.corners[1][3] - self.corners[1][0]) / (self.corners[0][3] - self.corners[0][0])
 
-        # Control if is insade the cage. The equation is control=m(x-a)
-        control1 = m1 * (self.position[0] - self.corners[0][0]) + self.corners[1][0]  # Y must be above the line
-        control2 = m2 * (self.position[0] - self.corners[0][2]) + self.corners[1][2]  # Y must be below the line
-        control3 = m3 * (self.position[0] - self.corners[0][2]) + self.corners[1][2]  # Y must be below the line
-        control4 = m4 * (self.position[0] - self.corners[0][0]) + self.corners[1][0]  # Y must be above the line
+        if not is_setup:
+            pos = [self.position[0], self.position[1]]
+        else:
+            pos = [self.home[0], self.home[1]]
 
-        ck1 = np.sign(self.position[1] - control1) + 1  # -1 converts to 0, 1 converts to 2
-        ck2 = -np.sign(self.position[1] - control2) + 1
-        ck3 = -np.sign(self.position[1] - control3) + 1
-        ck4 = np.sign(self.position[1] - control4) + 1
+
+        # Control if is insade the cage. The equation is control=m(x-a)
+        control1 = m1 * (pos[0] - self.corners[0][0]) + self.corners[1][0]  # Y must be above the line
+        control2 = m2 * (pos[0] - self.corners[0][2]) + self.corners[1][2]  # Y must be below the line
+        control3 = m3 * (pos[0] - self.corners[0][2]) + self.corners[1][2]  # Y must be below the line
+        control4 = m4 * (pos[0] - self.corners[0][0]) + self.corners[1][0]  # Y must be above the line
+
+        ck1 = np.sign(pos[1] - control1) + 1  # -1 converts to 0, 1 converts to 2
+        ck2 = -np.sign(pos[1] - control2) + 1
+        ck3 = -np.sign(pos[1] - control3) + 1
+        ck4 = np.sign(pos[1] - control4) + 1
+
+
+
         return ck1 and ck2 and ck3 and ck4
 
     def plot_status(self):
@@ -364,7 +373,7 @@ def mission_update(num_drones, drone_in, mission, drone_idx, mission_parameters,
 # 'GoToPerson'    --> the drones go to the position where the person was located
 # 'Random_action' --> Executes a rondom simple action
 #                     from moving forward, backward, right, left, rotate left, rotate right
-mission = 'GoToPerson'
+mission = 'Random_action'
 
 general_mission_parameters =\
     GeneralMissionParameters(accomplished=False, # The mission has not been accomplished at the beginning
@@ -403,33 +412,45 @@ if mission is not 'Random_action':
 else: mission_actual = mission
 drone.append(Drone(index=0, status_net=True,
                    mode=Drone.mode(previous='FreeFly',actual=mission_actual, parameters_destination=0),
+                   speed=general_mission_parameters.speed,
                    vision=np.zeros(shape=(len(X_pos), len(X_pos[0]))),
-                   vision_on=True))
+                   vision_on=True, corners=corners))
 # drone 1
-drone.append(Drone(index=1, status_net=True, mode=Drone.mode(actual=mission_actual),
+drone.append(Drone(index=1, status_net=True,
+                   mode=Drone.mode(previous='FreeFly',actual=mission_actual, parameters_destination=0),
+                   speed=general_mission_parameters.speed,
                    vision=np.zeros(shape=(len(X_pos), len(X_pos[0]))),
-                   vision_on=True))
+                   vision_on=True, corners=corners))
 # drone 2
-drone.append(Drone(index=2, status_net=True, mode=Drone.mode(actual=mission_actual),
+drone.append(Drone(index=2, status_net=True,
+                   mode=Drone.mode(previous='FreeFly',actual=mission_actual, parameters_destination=0),
+                   speed=general_mission_parameters.speed,
                    vision=np.zeros(shape=(len(X_pos), len(X_pos[0]))),
-                   vision_on=True))
+                   vision_on=True, corners=corners))
 # drone 3
-drone.append(Drone(index=3, status_net=True, mode=Drone.mode(actual=mission_actual),
+drone.append(Drone(index=3, status_net=True,
+                   mode=Drone.mode(previous='FreeFly',actual=mission_actual, parameters_destination=0),
+                   speed=general_mission_parameters.speed,
                    vision=np.zeros(shape=(len(X_pos), len(X_pos[0]))),
-                   vision_on=True))
+                   vision_on=True, corners=corners))
 # drone 4
-drone.append(Drone(index=4, status_net=True, mode=Drone.mode(actual=mission_actual),
+drone.append(Drone(index=4, status_net=True,
+                   mode=Drone.mode(previous='FreeFly',actual=mission_actual, parameters_destination=0),
+                   speed=general_mission_parameters.speed,
                    vision=np.zeros(shape=(len(X_pos), len(X_pos[0]))),
-                   vision_on=True))
+                   vision_on=True, corners=corners))
 # drone 5
-drone.append(Drone(index=5, status_net=True, mode=Drone.mode(actual=mission_actual),
+drone.append(Drone(index=5, status_net=True,
+                   mode=Drone.mode(previous='FreeFly',actual=mission_actual, parameters_destination=0),
+                   speed=general_mission_parameters.speed,
                    vision=np.zeros(shape=(len(X_pos), len(X_pos[0]))),
-                   vision_on=True))
+                   vision_on=True, corners=corners))
 
 
 # Creation poeple
 num_people = 3
-max_person_speed = 20
+max_person_speed = 20/3
+std_person = 0
 
 # create a list of person
 person = []
@@ -457,7 +478,7 @@ while times < 2:
     for drone_idx in range(min(num_drones, len(drone))):
         drone[drone_idx].plot_drone_home()
         # Check if the drone is inside the cage
-        boundary_check = drone[drone_idx].check_boundaries(corners)
+        boundary_check = drone[drone_idx].check_boundaries()
         if not boundary_check:  # If it is not in the cage, status_net goes to 0 and gets stopped
             if not drone[drone_idx].mode.actual == 'Off':
                 if time == 1:
@@ -514,7 +535,7 @@ while times < 2:
                 reward -= 1
     # Plotting people
     for person_idx in range(min(num_people, len(person))):
-        if not person[person_idx].check_boundaries(corners):
+        if not person[person_idx].check_boundaries():
             person[person_idx].orientation = person[
                                                  person_idx].orientation + 180
             # If the person hits the borders, turns 180 degrees
