@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import cv2
 # from environment import *
 from copy import deepcopy
 import time
@@ -12,17 +13,14 @@ plot_flag = 1
 acceleration = 30
 
 
-
 # Kostas = plt.imread('./Kostas Research Center.png')
 kostas = np.array(plt.imread('./Kostas Research Center 2.png'))
 # corners = [[370, 640, 542, 276], [215, 289, 681, 610]]
 corners = np.array([[111, 408, 300, 7],[43, 127, 517, 435]])
-
-################
 downsampling = 6
-corners = (corners/6)
-kostas.resize(int(kostas.shape[0]/downsampling), int(kostas.shape[1]/downsampling), 3)
-
+corners = (corners/downsampling).astype(int)
+# kostas.resize(int(kostas.shape[0]/downsampling), int(kostas.shape[1]/downsampling))
+kostas = cv2.resize(kostas, (round(kostas.shape[1]/downsampling), round(kostas.shape[0]/downsampling)))
 
 # general_mission_parameters
 class GeneralMissionParameters:
@@ -39,7 +37,7 @@ class GeneralMissionParameters:
 
 # generate person parameters
 class Person:
-    def __init__(self, position=np.array([]), orientation=0, speed=0, max_person_speed=0):
+    def __init__(self, position=np.array([]), orientation=0, speed=0, max_person_speed=0, corners=np.array([])):
         """
         position: [x,y] (pixels)
         orientation: Where the person is walking
@@ -47,7 +45,13 @@ class Person:
                 v_x = speed*cos(orientation-90 (rad))
                 v_y = speed*sin(orientation-90 (rad))
         """
-        self.position = np.array(position)
+
+        self.corners = corners
+        in_cage = 0
+        while in_cage==0:
+            self.position = np.array([np.random.randint(min(self.corners[0]), max(self.corners[0])),
+                                      np.random.randint(min(self.corners[0]), max(self.corners[1]))])
+            in_cage = self.check_boundaries()
         self.orientation = orientation
         self.speed = speed
         self.max_person_speed = max_person_speed
@@ -134,10 +138,11 @@ class Drone:
         self.status_net = status_net
         self.mode = self.mode()
         self.corners = corners
-        in_cage = 0
-        while in_cage is 0:
-            self.home = [np.random.randint(max(self.corners[0])), np.random.randint(max(self.corners[1]))]
-            in_cage = self.check_boundaries(is_setup=True)
+        in_cage = 0.0
+        while in_cage==0.0:
+            self.home = np.array([np.random.randint(min(self.corners[0]), max(self.corners[0])),
+                         np.random.randint(min(self.corners[0]), max(self.corners[1]))])
+            in_cage = self.check_boundaries(is_home=True)
         # self.home = np.array(home)
         self.position = self.home
         # self.orientation = orientation
@@ -153,7 +158,7 @@ class Drone:
         plt.plot(self.home[0], self.home[1],
                  'md', markersize=3, markeredgewidth=3, fillstyle='none')
 
-    def check_boundaries(self, is_setup=False):
+    def check_boundaries(self, is_home=False):
         """
         Checks if a drone is within the range of the cage of KRI
         """
@@ -163,11 +168,10 @@ class Drone:
         m3 = (self.corners[1][3] - self.corners[1][2]) / (self.corners[0][3] - self.corners[0][2])
         m4 = (self.corners[1][3] - self.corners[1][0]) / (self.corners[0][3] - self.corners[0][0])
 
-        if not is_setup:
+        if not is_home:
             pos = [self.position[0], self.position[1]]
         else:
             pos = [self.home[0], self.home[1]]
-
 
         # Control if is insade the cage. The equation is control=m(x-a)
         control1 = m1 * (pos[0] - self.corners[0][0]) + self.corners[1][0]  # Y must be above the line
@@ -179,8 +183,6 @@ class Drone:
         ck2 = -np.sign(pos[1] - control2) + 1
         ck3 = -np.sign(pos[1] - control3) + 1
         ck4 = np.sign(pos[1] - control4) + 1
-
-
 
         return ck1 and ck2 and ck3 and ck4
 
@@ -228,7 +230,7 @@ class Drone:
                    self.speed * np.sin(np.deg2rad(self.orientation - 90)),
                    color='b', units='dots', scale=0.5, width=3)
 
-    def plot_vision(self, dense=4):
+    def plot_vision(self, dense=1):
         """
         plot the angular vision of a drone
         """
@@ -236,7 +238,7 @@ class Drone:
             if sum(self.vision[i]) != 0:
                 tmp = np.nonzero(self.vision[i])
                 line_range = [tmp[0][0], tmp[0][-1]]
-                plt.plot(line_range, [i, i], 'y', LineWidth=2, alpha=0.5)
+                plt.plot(line_range, [i, i], 'y', LineWidth=4, alpha=0.5)
 
     def detect_persion(self, person):
         detected = 0
@@ -456,11 +458,11 @@ std_person = 0
 person = []
 
 # Person 0
-person.append(Person(position=[370, 290], orientation=180, speed=10, max_person_speed=20))
+person.append(Person(orientation=0, speed=0, max_person_speed=max_person_speed, corners=corners))
 # Person 1
-person.append(Person(position=[485, 450], orientation=0, speed=10, max_person_speed=20))
+person.append(Person(orientation=0, speed=0, max_person_speed=max_person_speed, corners=corners))
 # Person 2
-person.append(Person(position=[442, 614], orientation=300, speed=10, max_person_speed=20))
+person.append(Person(orientation=0, speed=0, max_person_speed=max_person_speed, corners=corners))
 
 # fig, ax = plt.subplots(figsize=(10,10))
 print("Simulation STARTS")
