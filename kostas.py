@@ -185,6 +185,8 @@ class Drone:
     def check_boundaries(self, is_home=False):
         """
         Checks if a drone is within the range of the cage of KRI
+        :param is_home: whether the checking is for initialization
+        :return: Flag to indicate whether is in the box
         """
         # Slope of the boundaries
         m1 = (self.corners[1][1] - self.corners[1][0]) / (self.corners[0][1] - self.corners[0][0])
@@ -264,7 +266,13 @@ class Drone:
                 line_range = [tmp[0][-1], tmp[0][0]]
                 plt.plot(line_range, [i, i], 'y', LineWidth=4, alpha=0.5)
 
-    def detect_persion(self, person):
+    def detect_person(self, person):
+        """
+        :param person: person class with people position
+        :return:
+            detected: number of objects have been detected
+            pos_detected: the position of object has been detected
+        """
         detected = 0
         pos_detected = []
         for person_idx in range(0, len(person)):
@@ -278,16 +286,14 @@ class Drone:
 
     def goto(self, general_mission_parameters):
         near = 0
-        drone_out = self
-        # if len(self.mode.parameters_destination) > 0:
-        drone_out.direction = np.rad2deg(np.arctan2(self.mode.parameters_destination[1] - self.position[1],
+        self.direction = np.rad2deg(np.arctan2(self.mode.parameters_destination[1] - self.position[1],
                                                       self.mode.parameters_destination[0] - self.position[0])) + 90
         if np.linalg.norm(self.position - self.mode.parameters_destination) < self.speed:
-            drone_out.speed = np.linalg.norm(self.position - self.mode.parameters_destination)
+            self.speed = np.linalg.norm(self.position - self.mode.parameters_destination)
         if np.linalg.norm(
                 self.position - self.mode.parameters_destination) < general_mission_parameters.distance_thres:
             near = 1
-        return drone_out, near
+        return near
 
     def action(self, mission_parameters):
             if self.mode.actual == 'Ignore':  # Ignore the detection and continue with the previous status
@@ -296,7 +302,7 @@ class Drone:
             elif self.mode.actual == 'RTL':
                 # Update the attributes of the drone based on the destination position.
                 # Indicate if the drone is near the destination
-                self, near = self.goto(mission_parameters)
+                near = self.goto(mission_parameters)
                 #             drone_out[drone_idx] = drone_in[drone_idx]
                 # if the drone is near to the home position, land
                 if near:
@@ -306,20 +312,18 @@ class Drone:
             elif self.mode.actual == 'GoToPerson':  # Send the drones to the position of the person detected
                 # Update the attributes of the drone based on the destination position.
                 # Indicate if the drone is near the destination
-                self, near = self.goto(mission_parameters)
-                # If the drone is near to the destination position, loiter
+                near = self.goto(mission_parameters)                # If the drone is near to the destination position, loiter
                 if near:
                     self.speed = 9000
                     self.mode.actual = 'Loiter'
                     print("Drone {} is loitering".format(self.index))
                     self.mode.parameters_destination = self.position
             elif self.mode.actual is 'Loiter':  # Keep the drone flying at its current position
-                self, near = self.goto(mission_parameters)
+                near = self.goto(mission_parameters)
                 self.speed = 0
 
             # Define the basic random actions: front, back, right, left, rotation +90, -90, 180
             elif self.mode.actual is 'Random_action':
-                # num_actions = mission_parameters.num_simple_actions
                 action_id = np.random.randint(mission_parameters.num_simple_actions)
                 self.simple_action(action_id, mission_parameters)
             else:
@@ -647,7 +651,7 @@ while times < max_times and not general_mission_parameters.accomplished:
     # Detection
     data_per_step.append([])
     for drone_idx in range(min(num_drones, len(drone))):
-        Detected_objects, position_people = drone[drone_idx].detect_persion(person)
+        Detected_objects, position_people = drone[drone_idx].detect_person(person)
         if Detected_objects > 0:
             general_mission_parameters.position_people = position_people
             num_ppl_detected = sum((np.sign(np.random.rand(1, Detected_objects) - p_misdetection) + 1) / 2)[0]
