@@ -794,7 +794,7 @@ if __name__ == "__main__":
          drone position(x, y), --> tuple 
          direction, 
          orientation, 
-         position_people       --> list of tuple contains people that the drone detected in current time
+         position_people       --> list of tuple contains people that have been detected by the drone currently
          )
          The tuple above is stand for one drone's OB, thus we have 6(the number of drone) tuples to indicate the drone's
          OB.
