@@ -692,6 +692,11 @@ def main(drone, person, reward, data, mission_parameters, environment):
     for person_idx in range(0, min(mission_parameters.num_people, len(person))):
         person[person_idx].random_walk()
 
+    if environment.plot_flag:
+        plt.title("Time stamp {}, Reward = {}".format(times, reward.total))
+        plt.show()
+        sleep(max(1 / environment.acceleration - (time() - time_start), 0))
+
     return drone, person, reward, data
 
 
@@ -707,10 +712,10 @@ if __name__ == "__main__":
     MarkerEdgeWidth = 1
     environment = Environment("./Kostas Research Center 2.png",
                               corners=np.array([[111, 408, 300, 7], [43, 127, 517, 435]]),
-                              downsampling=6,
-                              acceleration=30,
-                              plot_flag=True,
-                              max_time=900)
+                              downsampling=6,               # downsampling parameter
+                              acceleration=30,              # acceleration parameter
+                              plot_flag=True,               # plot flag
+                              max_time=100)                 # max running time
                               # acceleration=args.acceleration,
                               # plot_flag=args.plot_flag,
                               # max_time=args.max_time)
@@ -749,10 +754,6 @@ if __name__ == "__main__":
     while times < environment.max_time and not general_mission_parameters.accomplished:
         time_start = time()
         drone, person, reward, data_per_step = main(drone, person, reward, data_per_step, general_mission_parameters, environment)
-        if environment.plot_flag:
-            plt.title("Time stamp {}, Reward = {}".format(times, reward.total))
-            plt.show()
-            sleep(max(1/environment.acceleration - (time() - time_start), 0))
         times += 1
     if times >= environment.max_time:
         print("Drones run out of battery")
