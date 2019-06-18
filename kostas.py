@@ -3,37 +3,45 @@ import matplotlib.pyplot as plt
 from time import time, sleep
 import cv2
 import pandas as pd
+import argparse
 
 
-Max_Time = 900              # max running time
-plot_flag = True            # plotting flag
-acceleration = 30
-
-MarkerSize = 6
-MarkerEdgeWidth = 1
-# Kostas = plt.imread('./Kostas Research Center.png')
-kostas = np.array(plt.imread('./Kostas Research Center 2.png'))
-# corners = [[370, 640, 542, 276], [215, 289, 681, 610]]
-corners = np.array([[111, 408, 300, 7], [43, 127, 517, 435]])
-downsampling = 6
-corners = (corners/downsampling).astype(float)
-# kostas.resize(int(kostas.shape[0]/downsampling), int(kostas.shape[1]/downsampling))
-kostas = cv2.resize(kostas, (round(kostas.shape[1]/downsampling), round(kostas.shape[0]/downsampling)))
+class Environment:
+    def __init__(self, background, corners, downsampling=1, acceleration=30, plot_flag=True, max_time=900):
+        fig = np.array(plt.imread(background))
+        self.background = cv2.resize(fig, (round(fig.shape[1]/downsampling), round(fig.shape[0]/downsampling)))
+        self.corners = (corners/downsampling).astype(float)
+        self.x_pos = range(self.background.shape[1])  # Dimensions of the picture
+        self.y_pos = range(self.background.shape[0])
+        self.X_pos, self.Y_pos = np.meshgrid(self.x_pos, self.y_pos)
+        self.downsampling = downsampling
+        self.acceleration = acceleration
+        self.plot_flag = plot_flag
+        self.max_time = max_time
 
 
 # general_mission_parameters
 class GeneralMissionParameters:
-    def __init__(self,accomplished=False, distance_thres=0, position_detected=[],
-                 position_people=np.array([]), speed=0.0, num_simple_actions=0, num_people=0):
+    def __init__(self, name, action_id=None, isDebug=False,
+                 accomplished=False, distance_thres=0, position_detected=[],
+                 position_people=np.array([]), speed=0.0, num_simple_actions=0, num_drones=0, num_people=0):
         """
         distance_thres: Threshold of the distance to consider the drone is in a specific point
         """
-        self.accomplished = accomplished # The Flag for accomplish a mission
-        self.distance_thres = distance_thres # Threshold of the distance to consider the drone is in a specific point
+        self.name = name                        # Name of mission
+        if name=="Random_action":
+            self.mission_actual = name          # Random Generation Flag
+        else:
+            self.mission_actual = "FreeFly"
+        self.action_id = action_id              # Action ID (a num_drone * 1 vector)
+        self.isDebug = isDebug                  # Debug Flag
+        self.accomplished = accomplished        # The Flag for accomplish a mission
+        self.distance_thres = distance_thres    # Threshold of the distance to consider the drone is in a specific point
         self.position_detected = position_detected
         self.position_people = position_people
         self.speed = speed
         self.num_simple_actions = num_simple_actions
+        self.num_drones = num_drones
         self.num_people = num_people
 
 
@@ -52,7 +60,7 @@ class Reward:
 # generate person parameters
 class Person:
     def __init__(self, index=0, position=np.array([]), orientation=0,
-                 speed=0.0, max_person_speed=0.0, corners=np.array([])):
+                 speed=0.0, max_person_speed=0.0, corners=np.array([]), std_person=0):
         """
         position: [x,y] (pixels)
         orientation: Where the person is walking
@@ -71,6 +79,7 @@ class Person:
         self.orientation = orientation
         self.speed = speed
         self.max_person_speed = max_person_speed
+        self.std_person = std_person
 
     def check_boundaries(self):
         """
@@ -111,14 +120,14 @@ class Person:
                    self.speed * np.sin(np.deg2rad(self.orientation - 90)),
                    color='b', units='dots', scale=0.5, width=3)
 
-    def random_walk(self, std_person):
+    def random_walk(self):
         # Same orientation plus a random from N(0,100)
-        self.orientation = np.mod(self.orientation + std_person * np.random.normal(), 360)
+        self.orientation = np.mod(self.orientation + self.std_person * np.random.normal(), 360)
         # New position = previous position + speed/s * 1s
         self.position = self.position + np.array([self.speed * np.cos(np.deg2rad(self.orientation - 90)),
                                                   self.speed * np.sin(np.deg2rad(self.orientation - 90))])
         # Same speed plus a random from N(0,25)
-        self.speed = max(0, min(self.speed + std_person * np.random.normal(), self.max_person_speed))
+        self.speed = max(0, min(self.speed + self.std_person * np.random.normal(), self.max_person_speed))
 
 
 class Drone:
@@ -141,7 +150,9 @@ class Drone:
 
     def __init__(self, index=0, status_net=True, mode=Mode(),
                  home=np.array([]), position=np.array([]), orientation=0, direction=0,
-                 speed=0.0, vision=np.array([]), vision_on=True, corners=np.array([])):
+                 speed=0.0, vision=np.array([]), vision_on=True, corners=np.array([]),
+                 radius_vision=0.0, angular_vision=0.0, std_drone=0.0,
+                 p_disconnection=0.0, p_misdetection=0.1, p_package_lost=0.05, p_camera_off=0.0):
         """
         index: drone's index
         status_net: True --> active to the net, False --> not active to the net
@@ -174,6 +185,16 @@ class Drone:
         self.speed = speed
         self.vision = np.array(vision)
         self.vision_on = vision_on
+
+        self.radius_vision = radius_vision          # Radius for vision (pixels)
+        self.angular_vision = angular_vision        # Degrees of vision (<180)
+        self.std_drone = std_drone                  # Standard deviation for the movement of the drone
+
+        # Probability parameters
+        self.p_disconnection = p_disconnection  # Probability the drone disconnects the net
+        self.p_misdetection = p_misdetection    # Probability of not identifying a person when a person is on range
+        self.p_package_lost = p_package_lost    # Probability of lossing a package of information among the drones
+        self.p_camera_off = p_camera_off        # Probability of turning off the camera and not searching
 
     def plot_drone_home(self):
         """
@@ -296,38 +317,41 @@ class Drone:
         return near
 
     def action(self, mission_parameters):
-            if self.mode.actual == 'Ignore':  # Ignore the detection and continue with the previous status
-                # self = self
-                pass
-            elif self.mode.actual == 'RTL':
-                # Update the attributes of the drone based on the destination position.
-                # Indicate if the drone is near the destination
-                near = self.goto(mission_parameters)
-                #             drone_out[drone_idx] = drone_in[drone_idx]
-                # if the drone is near to the home position, land
-                if near:
-                    self.speed = 0
-                    self.mode.actual = 'Arm'
-                    print("Drone {} landed and armed".format(self.index))
-            elif self.mode.actual == 'GoToPerson':  # Send the drones to the position of the person detected
-                # Update the attributes of the drone based on the destination position.
-                # Indicate if the drone is near the destination
-                near = self.goto(mission_parameters)                # If the drone is near to the destination position, loiter
-                if near:
-                    self.speed = 9000
-                    self.mode.actual = 'Loiter'
-                    print("Drone {} is loitering".format(self.index))
-                    self.mode.parameters_destination = self.position
-            elif self.mode.actual is 'Loiter':  # Keep the drone flying at its current position
-                near = self.goto(mission_parameters)
+        if self.mode.actual == 'Ignore':  # Ignore the detection and continue with the previous status
+            # self = self
+            pass
+        elif self.mode.actual == 'RTL':
+            # Update the attributes of the drone based on the destination position.
+            # Indicate if the drone is near the destination
+            near = self.goto(mission_parameters)
+            #             drone_out[drone_idx] = drone_in[drone_idx]
+            # if the drone is near to the home position, land
+            if near:
                 self.speed = 0
+                self.mode.actual = 'Arm'
+                print("Drone {} landed and armed".format(self.index))
+        elif self.mode.actual == 'GoToPerson':  # Send the drones to the position of the person detected
+            # Update the attributes of the drone based on the destination position.
+            # Indicate if the drone is near the destination
+            near = self.goto(mission_parameters)                # If the drone is near to the destination position, loiter
+            if near:
+                self.speed = 0
+                self.mode.actual = 'Loiter'
+                print("Drone {} is loitering".format(self.index))
+                self.mode.parameters_destination = self.position
+        elif self.mode.actual is 'Loiter':  # Keep the drone flying at its current position
+            near = self.goto(mission_parameters)
+            self.speed = 0
 
-            # Define the basic random actions: front, back, right, left, rotation +90, -90, 180
-            elif self.mode.actual is 'Random_action':
-                action_id = np.random.randint(mission_parameters.num_simple_actions)
-                self.simple_action(action_id, mission_parameters)
+        # Define the basic random actions: front, back, right, left, rotation +90, -90, 180
+        elif self.mode.actual is 'Random_action':
+            if mission_parameters.isDebug:
+                drone_action_id = np.random.randint(mission_parameters.num_simple_actions)
             else:
-                pass
+                drone_action_id = mission_parameters.action_id[self.index]
+            self.simple_action(drone_action_id, mission_parameters)
+        else:
+            pass
 
     def simple_action(self, action_id, mission_parameters):
         # action_id = 0 --> Move 1 meter/s to the north
@@ -361,12 +385,11 @@ class Drone:
 
 
 # Function
-
-def mission_update(num_drones, drone, mission, drone_idx, mission_parameters, p_package_lost, reward):
-    if mission == 'Ignore':  # Ignore the detection and continue with the previous status
+def mission_update(drone, drone_idx, mission_parameters, reward):
+    if mission_parameters.name == 'Ignore':  # Ignore the detection and continue with the previous status
         # drone_out = deepcopy(drone_in)
         pass
-    elif mission == 'RTL':  # Send the drones back to their launched point
+    elif mission_parameters.name == 'RTL':  # Send the drones back to their launched point
         # drone_out = deepcopy(drone_in)
         # If the drone that detects the person is not on the net,
         # do not transmit any information to the remaining drones
@@ -378,7 +401,7 @@ def mission_update(num_drones, drone, mission, drone_idx, mission_parameters, p_
             drone[drone_idx].vision_on = False  # Set the camera off when returning to launch
         else:
             reward.total -= reward.cost_communications  # If the drone is in the net, it transmits a package that reduces 1 point the reward
-            for idx in range(0, min(num_drones, len(drone))):
+            for idx in range(0, min(mission_parameters.num_drones, len(drone))):
                 if idx == drone_idx:  # The drone that detects the person updates its mission
                     drone[idx].mode.actual = 'RTL'
                     print("Drone {} is returning to launch".format(idx))
@@ -387,7 +410,7 @@ def mission_update(num_drones, drone, mission, drone_idx, mission_parameters, p_
                     drone[idx].vision_on = False  # Set the camera off when returning to launch
                 else:
                     if drone[idx].status_net:
-                        send_package = ((np.sign(np.random.rand(1) - p_package_lost) + 1) / 2)[0]
+                        send_package = ((np.sign(np.random.rand(1) - drone[idx].p_package_lost) + 1) / 2)[0]
                         if send_package == 1:
                             drone[idx].mode.actual = 'RTL'
                             print("Drone {} is returning to launch".format(idx))
@@ -398,7 +421,7 @@ def mission_update(num_drones, drone, mission, drone_idx, mission_parameters, p_
                         else:
                             print("Package sent from drone {} to drone {} was lost"
                                   .format(drone_idx, idx))
-    elif mission == 'GoToPerson':
+    elif mission_parameters.name == 'GoToPerson':
         reward.total += reward.person_dectected
         # drone_out = deepcopy(drone_in)  # First, all the structure of the drone is copied
         # If the drone that detects the person is not on the net,
@@ -411,7 +434,7 @@ def mission_update(num_drones, drone, mission, drone_idx, mission_parameters, p_
             drone[drone_idx].vision_on = False  # Set the camera off when returning to launch
         else:
             reward.total -= reward.cost_communications
-            for idx in range(0, min(num_drones, len(drone))):
+            for idx in range(0, min(mission_parameters.num_drones, len(drone))):
                 if idx == drone_idx:
                     drone[idx].mode.actual = 'GoToPerson'
                     print("Drone {} is going to position of person detected".format(idx))
@@ -419,7 +442,7 @@ def mission_update(num_drones, drone, mission, drone_idx, mission_parameters, p_
                     drone[idx].vision_on = False  # Set the camera off when returning to launch
                 else:
                     if drone[idx].status_net:
-                        send_package = ((np.sign(np.random.rand(1) - p_package_lost) + 1) / 2)[0]
+                        send_package = ((np.sign(np.random.rand(1) - drone[idx].p_package_lost) + 1) / 2)[0]
                         if send_package == 1:
                             drone[idx].mode.actual = 'GoToPerson'
                             print("Drone {} is going to position of person detected"
@@ -429,7 +452,7 @@ def mission_update(num_drones, drone, mission, drone_idx, mission_parameters, p_
                         else:
                             print("Package sent frone drone {} to drone {} was lost"
                                   .format(drone_idx, idx))
-    elif mission == "Random_action":
+    elif mission_parameters.name == "Random_action":
         drone[drone_idx].mode.parameters_detection = 0
         for idx_ppl in range(len(mission_parameters.position_people)):
             if mission_parameters.position_people[idx_ppl] not in mission_parameters.position_detected:
@@ -443,148 +466,119 @@ def mission_update(num_drones, drone, mission, drone_idx, mission_parameters, p_
                 if len(mission_parameters.position_detected) == mission_parameters.num_people:
                     print("All {} people have been detected. \nMission accomplished!".format(mission_parameters.num_people))
                     mission_parameters.accomplished = 1
-    else:        # drone_out = deepcopy(drone_in)
+    else:
         pass
-    # return drone_out, reward
-
-
-# Definition of the mission
-# 'Ignore'        --> continue as before
-# 'RTL'           --> return to launch
-# 'GoToPerson'    --> the drones go to the position where the person was located
-# 'Random_action' --> Executes a rondom simple action
-#                     from moving forward, backward, right, left, rotate left, rotate right
-mission = 'Random_action'
-
-general_mission_parameters =\
-    GeneralMissionParameters(accomplished=False,  # The mission has not been accomplished at the beginning
-                             distance_thres=5,
-                             speed=(20/3)/downsampling,  # Default speed for the drones, equivalent to 1m/s
-                             num_simple_actions=6)  # Number of simple actions for the 'Random_action' mode
-
-print('Mission when locating a person: ' + mission)
-reward = 0  # Cost and reward of the mission
-
-
-# Probability parameters
-p_disconnection = 0.0   # Probability the drone disconnects the net
-p_misdetection = 0.1    # Probability of not identifying a person when a person is on range
-p_package_lost = 0.05   # Probability of lossing a package of information among the drones
-p_camera_off = 0.0      # Probability of turning off the camera and not searching
-
-
-# Creation of the drone structures
-num_drones = 6                                    # Maximun number of drones
-x_pos = range(kostas.shape[1])                    # Dimensions of the picture
-y_pos = range(kostas.shape[0])
-X_pos, Y_pos = np.meshgrid(x_pos, y_pos)
-radius_vision = (10*20/3)/downsampling            # Radius for vision (pixels)
-angular_vision = 60                               # Degrees of vision (<180)
-std_drone = 0.1                                   # Standard deviation for the movement of the drone
 
 
 # Drone status setup
+def generate_drones(general_mission_parameters, environment):
+    # Create the drone structures
+    drone = list()
+    # drone 0
+    drone.append(Drone(index=0, status_net=True,
+                       mode=Drone.Mode(previous='FreeFly',
+                                       actual=general_mission_parameters.mission_actual,
+                                       parameters_destination=np.array([])),
+                       speed=general_mission_parameters.speed,
+                       vision=np.zeros(shape=(environment.X_pos.shape[0], environment.X_pos.shape[1])),
+                       radius_vision=(10*20/3)/environment.downsampling,  # Radius for vision (pixels)
+                       angular_vision=60,  # Degrees of vision (<180)
+                       std_drone=0.1,   # Standard deviation for the movement of the drone
+                       vision_on=True, corners=environment.corners))
+    # drone 1
+    drone.append(Drone(index=1, status_net=True,
+                       mode=Drone.Mode(previous='FreeFly',
+                                       actual=general_mission_parameters.mission_actual,
+                                       parameters_destination=np.array([])),
+                       speed=general_mission_parameters.speed,
+                       vision=np.zeros(shape=(environment.X_pos.shape[0], environment.X_pos.shape[1])),
+                       radius_vision=(10*20/3)/environment.downsampling,  # Radius for vision (pixels)
+                       angular_vision=60,  # Degrees of vision (<180)
+                       std_drone=0.1,  # Standard deviation for the movement of the drone
+                       vision_on=True, corners=environment.corners))
+    # drone 2
+    drone.append(Drone(index=2, status_net=True,
+                       mode=Drone.Mode(previous='FreeFly',
+                                       actual=general_mission_parameters.mission_actual,
+                                       parameters_destination=np.array([])),
+                       speed=general_mission_parameters.speed,
+                       vision=np.zeros(shape=(environment.X_pos.shape[0], environment.X_pos.shape[1])),
+                       radius_vision=(10*20/3)/environment.downsampling,  # Radius for vision (pixels)
+                       angular_vision=60,  # Degrees of vision (<180)
+                       std_drone=0.1,  # Standard deviation for the movement of the drone
+                       vision_on=True, corners=environment.corners))
+    # drone 3
+    drone.append(Drone(index=3, status_net=True,
+                       mode=Drone.Mode(previous='FreeFly',
+                                       actual=general_mission_parameters.mission_actual,
+                                       parameters_destination=np.array([])),
+                       speed=general_mission_parameters.speed,
+                       vision=np.zeros(shape=(environment.X_pos.shape[0], environment.X_pos.shape[1])),
+                       radius_vision=(10*20/3)/environment.downsampling,  # Radius for vision (pixels)
+                       angular_vision=60,  # Degrees of vision (<180)
+                       std_drone=0.1,  # Standard deviation for the movement of the drone
+                       vision_on=True, corners=environment.corners))
+    # drone 4
+    drone.append(Drone(index=4, status_net=True,
+                       mode=Drone.Mode(previous='FreeFly',
+                                       actual=general_mission_parameters.mission_actual,
+                                       parameters_destination=np.array([])),
+                       speed=general_mission_parameters.speed,
+                       vision=np.zeros(shape=(environment.X_pos.shape[0], environment.X_pos.shape[1])),
+                       radius_vision=(10*20/3)/environment.downsampling,  # Radius for vision (pixels)
+                       angular_vision=60,  # Degrees of vision (<180)
+                       std_drone=0.1,  # Standard deviation for the movement of the drone
+                       vision_on=True, corners=environment.corners))
+    # drone 5
+    drone.append(Drone(index=5, status_net=True,
+                       mode=Drone.Mode(previous='FreeFly',
+                                       actual=general_mission_parameters.mission_actual,
+                                       parameters_destination=np.array([])),
+                       speed=general_mission_parameters.speed,
+                       vision=np.zeros(shape=(environment.X_pos.shape[0], environment.X_pos.shape[1])),
+                       radius_vision=(10*20/3)/environment.downsampling,  # Radius for vision (pixels)
+                       angular_vision=60,  # Degrees of vision (<180)
+                       std_drone=0.1,  # Standard deviation for the movement of the drone
+                       vision_on=True, corners=environment.corners))
+    return drone, general_mission_parameters
 
-# create a list contain all drone
-drone = list()
-# drone 0
-if mission is not 'Random_action':
-    mission_actual = 'FreeFly'
-else:
-    mission_actual = mission
 
-# drone.append(Drone(index=0, status_net=True,
-#                    mode=Drone.Mode(previous='FreeFly', actual="FreeFly", parameters_destination=np.array([])),
-#                    home=[30, 75], orientation=0,
-#                    speed=general_mission_parameters.speed,
-#                    vision=np.zeros(shape=(X_pos.shape[0], X_pos.shape[1])),
-#                    vision_on=True, corners=corners))
-drone.append(Drone(index=0, status_net=True,
-                   mode=Drone.Mode(previous='FreeFly', actual=mission_actual, parameters_destination=np.array([])),
-                   speed=general_mission_parameters.speed,
-                   vision=np.zeros(shape=(X_pos.shape[0], X_pos.shape[1])),
-                   vision_on=True, corners=corners))
-# drone 1
-drone.append(Drone(index=1, status_net=True,
-                   mode=Drone.Mode(previous='FreeFly', actual=mission_actual, parameters_destination=np.array([])),
-                   speed=general_mission_parameters.speed,
-                   vision=np.zeros(shape=(X_pos.shape[0], X_pos.shape[1])),
-                   vision_on=True, corners=corners))
-# drone 2
-drone.append(Drone(index=2, status_net=True,
-                   mode=Drone.Mode(previous='FreeFly', actual=mission_actual, parameters_destination=np.array([])),
-                   speed=general_mission_parameters.speed,
-                   vision=np.zeros(shape=(X_pos.shape[0], X_pos.shape[1])),
-                   vision_on=True, corners=corners))
-# drone 3
-drone.append(Drone(index=3, status_net=True,
-                   mode=Drone.Mode(previous='FreeFly', actual=mission_actual, parameters_destination=np.array([])),
-                   speed=general_mission_parameters.speed,
-                   vision=np.zeros(shape=(X_pos.shape[0], X_pos.shape[1])),
-                   vision_on=True, corners=corners))
-# drone 4
-drone.append(Drone(index=4, status_net=True,
-                   mode=Drone.Mode(previous='FreeFly', actual=mission_actual, parameters_destination=np.array([])),
-                   speed=general_mission_parameters.speed,
-                   vision=np.zeros(shape=(X_pos.shape[0], X_pos.shape[1])),
-                   vision_on=True, corners=corners))
-# drone 5
-drone.append(Drone(index=5, status_net=True,
-                   mode=Drone.Mode(previous='FreeFly', actual=mission_actual, parameters_destination=np.array([])),
-                   speed=general_mission_parameters.speed,
-                   vision=np.zeros(shape=(X_pos.shape[0], X_pos.shape[1])),
-                   vision_on=True, corners=corners))
+def generate_people(general_mission_parameters, environment, max_person_speed=20/3):
+    # Creation poeple
+    person = list()
+    # Person 0
+    person.append(Person(orientation=0, speed=0, max_person_speed=max_person_speed,
+                         corners=environment.corners, std_person=0))
+    # Person 1
+    person.append(Person(orientation=0, speed=0, max_person_speed=max_person_speed,
+                         corners=environment.corners, std_person=0))
+    # Person 2
+    person.append(Person(orientation=0, speed=0, max_person_speed=max_person_speed,
+                         corners=environment.corners, std_person=0))
+    return person, general_mission_parameters
 
 
-# Creation poeple
-num_people = 3
-max_person_speed = 20/3
-std_person = 0
-
-# create a list of person
-person = list()
-
-# Person 0
-person.append(Person(orientation=0, speed=0, max_person_speed=max_person_speed, corners=corners))
-# Person 1
-person.append(Person(orientation=0, speed=0, max_person_speed=max_person_speed, corners=corners))
-# Person 2
-person.append(Person(orientation=0, speed=0, max_person_speed=max_person_speed, corners=corners))
-
-# Simutation begin
-
-data_per_step = list()
-reward = Reward()
-general_mission_parameters.num_people = 3  # Number of people to be detected
-max_times = Max_Time
-# max_times = 900
-print("SIMULATION STARTS")
-t = time()
-times = 1
-print("Position of Targets")
-for person_idx in range(min(general_mission_parameters.num_people, len(person))):
-    print("({})".format(person[person_idx].position))
-
-while times < max_times and not general_mission_parameters.accomplished:
+def main(drone, person, reward, data, mission_parameters, environment):
+    # while times < max_times and not general_mission_parameters.accomplished:
     plt.close()
-    fig = plt.figure()
-    time_start = time()
-    plt.imshow(kostas, origin='lower')
-    if plot_flag:
+    plt.figure()
+    # time_start = time()
+    plt.imshow(environment.background, origin='lower')
+    if environment.plot_flag:
         for i in range(4):
-            plt.plot([corners[0][-1 + i], corners[0][i]],
-                     [corners[1][-1 + i], corners[1][i]],
+            plt.plot([environment.corners[0][-1 + i], environment.corners[0][i]],
+                     [environment.corners[1][-1 + i], environment.corners[1][i]],
                      c='k', LineWidth=1)
 
     # Plotting Drone properties
-    for drone_idx in range(min(num_drones, len(drone))):
-        if plot_flag:
+    for drone_idx in range(min(mission_parameters.num_drones, len(drone))):
+        if environment.plot_flag:
             drone[drone_idx].plot_drone_home()
         # Check if the drone is inside the cage
         boundary_check = drone[drone_idx].check_boundaries()
         if not boundary_check:  # If it is not in the cage, status_net goes to 0 and gets stopped
             if not drone[drone_idx].mode.actual == 'Off':
-                if time == 1:
+                if len(data) == 0:
                     print("Drone {} is out of the KRI cage!"
                           .format(drone_idx))
                 else:
@@ -598,90 +592,92 @@ while times < max_times and not general_mission_parameters.accomplished:
                 drone[drone_idx].speed = 0
                 drone[drone_idx].vision = 0 * drone[drone_idx].vision
                 drone[drone_idx].vision_on = False
-            if plot_flag:
+            if environment.plot_flag:
                 plt.plot(drone[drone_idx].position[0], drone[drone_idx].position[1],
                          'ks', markersize=MarkerSize, fillstyle='none')
-        elif plot_flag:
+        elif environment.plot_flag:
             # Color for the status of the drone
             drone[drone_idx].plot_status()
 
         # Speed
-        if plot_flag:
+        if environment.plot_flag:
             drone[drone_idx].plot_velocity()
 
         # Angular vision
-        drone[drone_idx].vision = np.zeros(shape=(X_pos.shape[0], X_pos.shape[1]))
+        drone[drone_idx].vision = np.zeros(shape=(environment.X_pos.shape[0], environment.X_pos.shape[1]))
         if drone[drone_idx].vision_on:  # If the camera is on, but it can be off with some probability
-            drone[drone_idx].vision[(X_pos - drone[drone_idx].position[0]) ** 2
-                                    + (Y_pos - drone[drone_idx].position[1]) ** 2
-                                    < radius_vision ** 2] = float(((np.sign(np.random.rand(1) - p_camera_off) + 1) / 2))
-            if (180 <= np.mod(drone[drone_idx].orientation - angular_vision / 2, 360)) and (
-                    np.mod(drone[drone_idx].orientation - angular_vision / 2, 360) < 360):
+            drone[drone_idx].vision[(environment.X_pos - drone[drone_idx].position[0]) ** 2
+                                    + (environment.Y_pos - drone[drone_idx].position[1]) ** 2
+                                    < drone[drone_idx].radius_vision ** 2] =\
+                float(((np.sign(np.random.rand(1) - drone[drone_idx].p_camera_off) + 1) / 2))
+            if (180 <= np.mod(drone[drone_idx].orientation - drone[drone_idx].angular_vision / 2, 360)) and (
+                    np.mod(drone[drone_idx].orientation - drone[drone_idx].angular_vision / 2, 360) < 360):
                 drone[drone_idx].vision[
-                    Y_pos > np.tan(np.deg2rad(90 + drone[drone_idx].orientation - angular_vision / 2)) * (
-                                X_pos - drone[drone_idx].position[0]) + drone[drone_idx].position[1]] = 0
+                    environment.Y_pos > np.tan(np.deg2rad(90 + drone[drone_idx].orientation -
+                                                          drone[drone_idx].angular_vision / 2)) * (
+                                environment.X_pos - drone[drone_idx].position[0]) + drone[drone_idx].position[1]] = 0
             else:
                 drone[drone_idx].vision[
-                    Y_pos < np.tan(np.deg2rad(90 + drone[drone_idx].orientation - angular_vision / 2)) * (
-                                X_pos - drone[drone_idx].position[0]) + drone[drone_idx].position[1]] = 0
-            if (0 <= np.mod(drone[drone_idx].orientation + angular_vision / 2, 360)) and (
-                    np.mod(drone[drone_idx].orientation + angular_vision / 2, 360) < 180):
+                    environment.Y_pos < np.tan(np.deg2rad(90 + drone[drone_idx].orientation -
+                                              drone[drone_idx].angular_vision / 2)) * (
+                                environment.X_pos - drone[drone_idx].position[0]) + drone[drone_idx].position[1]] = 0
+            if (0 <= np.mod(drone[drone_idx].orientation + drone[drone_idx].angular_vision / 2, 360)) and (
+                    np.mod(drone[drone_idx].orientation + drone[drone_idx].angular_vision / 2, 360) < 180):
                 drone[drone_idx].vision[
-                    Y_pos > np.tan(np.deg2rad(90 + drone[drone_idx].orientation + angular_vision / 2)) * (
-                                X_pos - drone[drone_idx].position[0]) + drone[drone_idx].position[1]] = 0
+                    environment.Y_pos > np.tan(np.deg2rad(90 + drone[drone_idx].orientation +
+                                                          drone[drone_idx].angular_vision / 2)) * (
+                                environment.X_pos - drone[drone_idx].position[0]) + drone[drone_idx].position[1]] = 0
             else:
                 drone[drone_idx].vision[
-                    Y_pos < np.tan(np.deg2rad(90 + drone[drone_idx].orientation + angular_vision / 2)) * (
-                                X_pos - drone[drone_idx].position[0]) + drone[drone_idx].position[1]] = 0
-            if plot_flag:
+                    environment.Y_pos < np.tan(np.deg2rad(90 + drone[drone_idx].orientation +
+                                                          drone[drone_idx].angular_vision / 2)) * (
+                                environment.X_pos - drone[drone_idx].position[0]) + drone[drone_idx].position[1]] = 0
+            if environment.plot_flag:
                 drone[drone_idx].plot_vision()
             if sum(sum(drone[drone_idx].vision)) != 0:
                 reward.total -= reward.cost_camera_use
 
     # Plotting people
-    for person_idx in range(min(num_people, len(person))):
+    for person_idx in range(min(mission_parameters.num_people, len(person))):
         if not person[person_idx].check_boundaries():
-            person[person_idx].orientation = person[
-                                                 person_idx].orientation + 180
             # If the person hits the borders, turns 180 degrees
-        if plot_flag:
+            person[person_idx].orientation = person[person_idx].orientation + 180
+        if environment.plot_flag:
             person[person_idx].plot_person()
             person[person_idx].plot_velocity()
 
     # Detection
-    data_per_step.append([])
-    for drone_idx in range(min(num_drones, len(drone))):
+    data.append([])
+    for drone_idx in range(min(mission_parameters.num_drones, len(drone))):
         Detected_objects, position_people = drone[drone_idx].detect_person(person)
         if Detected_objects > 0:
-            general_mission_parameters.position_people = position_people
-            num_ppl_detected = sum((np.sign(np.random.rand(1, Detected_objects) - p_misdetection) + 1) / 2)[0]
+            mission_parameters.position_people = position_people
+            num_ppl_detected = sum((np.sign(np.random.rand(1, Detected_objects) - drone[drone_idx].p_misdetection) + 1) / 2)[0]
             print("Drone {} detected {} people out of {} objects detected"
                   .format(drone_idx, int(num_ppl_detected), Detected_objects))
             if num_ppl_detected > 0:
-                mission_update(num_drones, drone, mission, drone_idx,
-                               general_mission_parameters, p_package_lost, reward)
-        data_per_step[-1].append([drone[drone_idx].position[0], drone[drone_idx].position[1],
-                                  np.mod(drone[drone_idx].direction, 360),
-                                  np.mod(drone[drone_idx].orientation, 360),
-                                  drone[drone_idx].mode.parameters_detection])
-    data_per_step[-1].append(reward.total)
+                mission_update(drone, drone_idx, mission_parameters, reward)
+        data[-1].append([drone[drone_idx].position[0], drone[drone_idx].position[1],
+                         np.mod(drone[drone_idx].direction, 360),
+                         np.mod(drone[drone_idx].orientation, 360),
+                         drone[drone_idx].mode.parameters_detection])
+    data[-1].append(reward.total)
 
     # Action
-    # drone = action(num_drones, drone, general_mission_parameters)
-    for drone_idx in range(0, min(num_drones, len(drone))):
-        drone[drone_idx].action(general_mission_parameters)
+    for drone_idx in range(0, min(mission_parameters.num_drones, len(drone))):
+        drone[drone_idx].action(mission_parameters)
 
     # Drone Updates with random variables
-    for drone_idx in range(0, min(num_drones, len(drone))):
+    for drone_idx in range(0, min(mission_parameters.num_drones, len(drone))):
         if drone[drone_idx].mode.actual != 'Off':  # Update only if the drone is not off
             # It disconnects with a Bernoulli(p_disconnection)
-            drone[drone_idx].status_net = bool((np.sign(np.random.rand(1) - p_disconnection) + 1) / 2)
+            drone[drone_idx].status_net = bool((np.sign(np.random.rand(1) - drone[drone_idx].p_disconnection) + 1) / 2)
             if not ((drone[drone_idx].mode.actual == 'Disarm') or (
                     drone[drone_idx].mode.actual == 'Arm')):  # If the drone is flying
                 # Same orientation plus a random from N(0,1)
-                drone[drone_idx].orientation += std_drone * np.random.normal()
+                drone[drone_idx].orientation += drone[drone_idx].std_drone * np.random.normal()
                 # Same direction plus a random from N(0,1)
-                drone[drone_idx].direction += std_drone * np.random.normal()
+                drone[drone_idx].direction += drone[drone_idx].std_drone * np.random.normal()
                 # If the drone changed the flying mode, do not move while planning the new mode
                 if drone[drone_idx].mode.previous == drone[drone_idx].mode.actual:
                     # New position = previous position + speed/s x 1s
@@ -689,22 +685,79 @@ while times < max_times and not general_mission_parameters.accomplished:
                         [drone[drone_idx].speed * np.cos(np.deg2rad(drone[drone_idx].direction - 90)),
                          drone[drone_idx].speed * np.sin(np.deg2rad(drone[drone_idx].direction - 90))])
                     reward.total -= reward.cost_movenent
-                drone[drone_idx].speed = drone[drone_idx].speed + std_drone * np.random.normal(0, 1)
+                drone[drone_idx].speed = drone[drone_idx].speed + drone[drone_idx].std_drone * np.random.normal(0, 1)
         drone[drone_idx].mode.previous = drone[drone_idx].mode.actual
 
     # People updates with random variables
-    for person_idx in range(0, min(num_people, len(person))):
-        person[person_idx].random_walk(std_person)
-    # t = time() - time_start
-    if plot_flag:
-        plt.title("Time stamp {}, Reward = {}".format(times, reward.total))
-        plt.show()
-        sleep(max(1/acceleration - (time() - time_start), 0))
-    times += 1
-    if times == max_times:
+    for person_idx in range(0, min(mission_parameters.num_people, len(person))):
+        person[person_idx].random_walk()
+
+    return drone, person, reward, data
+
+
+if __name__ == "__main__":
+    # parse = argparse.ArgumentParser(description="Kostas Simulator")
+    # parse.add_argument('max_time',type=int, default=900, help="max running time")
+    # parse.add_argument('plot_flag',type=bool, default=True, help="plotting flag")
+    # parse.add_argument('acceleration',type=int, default=30, help="acceleration value")
+    # parse.add_argument('isDebug',type=bool, default=True, help="whether assign random action id by random variable")
+    # args = parse.parse_args()
+
+    MarkerSize = 6
+    MarkerEdgeWidth = 1
+    environment = Environment("./Kostas Research Center 2.png",
+                              corners=np.array([[111, 408, 300, 7], [43, 127, 517, 435]]),
+                              downsampling=6,
+                              acceleration=30,
+                              plot_flag=True,
+                              max_time=900)
+                              # acceleration=args.acceleration,
+                              # plot_flag=args.plot_flag,
+                              # max_time=args.max_time)
+
+    # Definition of the mission
+    # 'Ignore'        --> continue as before
+    # 'RTL'           --> return to launch
+    # 'GoToPerson'    --> the drones go to the position where the person was located
+    # 'Random_action' --> Executes a rondom simple action
+    #                     from moving forward, backward, right, left, rotate left, rotate right
+    # mission = 'Random_action'
+    general_mission_parameters = \
+        GeneralMissionParameters(name="Random_action",
+                                 isDebug=True,
+                                 accomplished=False,  # The mission has not been accomplished at the beginning
+                                 distance_thres=5,
+                                 speed=(20/3)/environment.downsampling,  # Default speed for the drones,
+                                                                         # equivalent to 1m/s
+                                 num_simple_actions=6,  # Number of simple actions for the 'Random_action' mode
+                                 num_people=3,
+                                 num_drones=6)
+    drone, general_mission_parameters = generate_drones(general_mission_parameters, environment)
+    person, general_mission_parameters = generate_people(general_mission_parameters, environment)
+
+    # Simutation begin
+    data_per_step = list()
+    reward = Reward()
+    print("SIMULATION STARTS")
+    t = time()
+    times = 1
+    print("Position of Targets")
+    for person_idx in range(min(general_mission_parameters.num_people, len(person))):
+        print("({})".format(person[person_idx].position))
+    print('Mission when locating a person: ' + general_mission_parameters.name)
+
+    while times < environment.max_time and not general_mission_parameters.accomplished:
+        time_start = time()
+        drone, person, reward, data_per_step = main(drone, person, reward, data_per_step, general_mission_parameters, environment)
+        if environment.plot_flag:
+            plt.title("Time stamp {}, Reward = {}".format(times, reward.total))
+            plt.show()
+            sleep(max(1/environment.acceleration - (time() - time_start), 0))
+        times += 1
+    if times >= environment.max_time:
         print("Drones run out of battery")
         print("Total Reward is:{}\nSIMULATION ENDS in {} seconds".format(reward.total, round(time() - t,2)))
 
-file = pd.DataFrame(data_per_step)
-file.to_csv('./all_data.csv', sep=',', index=False)
-print('All data have been saved in all_data.csv\nEnd')
+    file = pd.DataFrame(data_per_step)
+    file.to_csv('./all_data.csv', sep=',', index=False)
+    print('All data have been saved in all_data.csv\nEnd')
