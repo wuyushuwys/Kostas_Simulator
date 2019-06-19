@@ -267,15 +267,15 @@ class Simulation:
                                           self.corners[1][0] + 1.5 * home_margin])
                     self.orientation = 135
                 elif corner == 1:  # Bottom right
-                    self.home = np.array([self.corners[0][1] + home_margin,
+                    self.home = np.array([self.corners[0][1] - 1.5 * home_margin,
                                           self.corners[1][1] + home_margin])
                     self.orientation = 225
                 elif corner == 2:  # Top right
-                    self.home = np.array([self.corners[0][2] + home_margin,
+                    self.home = np.array([self.corners[0][2] - home_margin,
                                           self.corners[1][2] - 1.5 * home_margin])
                     self.orientation = 315
                 elif corner == 3:
-                    self.home = np.array([self.corners[0][3] + home_margin,
+                    self.home = np.array([self.corners[0][3] + 1.5 *  home_margin,
                                           self.corners[1][3] - home_margin])
                     self.orientation = 45
 
