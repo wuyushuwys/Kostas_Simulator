@@ -261,27 +261,23 @@ class Simulation:
                 self.orientation = 135
             elif placed_pattern == 4:  # Starting from all corners randomly
                 corner = np.random.randint(4)
-                self.home = np.array([self.corners[0][corner] + home_margin,
-                                      self.corners[1][corner] + 1.5 * home_margin])
-                ori = [135, 225, 315, 45]
-                self.orientation = ori[corner]
 
-                # if corner == 0:  # Bottom left
-                #     self.home = np.array([self.corners[0][0] + home_margin,
-                #                           self.corners[1][0] + 1.5 * home_margin])
-                #     self.orientation = 135
-                # elif corner == 1:  # Bottom right
-                #     self.home = np.array([self.corners[0][1] + home_margin,
-                #                           self.corners[1][1] + 1.5 * home_margin])
-                #     self.orientation = 225
-                # elif corner == 2:  # Top right
-                #     self.home = np.array([self.corners[0][2] + home_margin,
-                #                           self.corners[1][2] + 1.5 * home_margin])
-                #     self.orientation = 315
-                # elif corner == 3:
-                #     self.home = np.array([self.corners[0][3] + home_margin,
-                #                           self.corners[1][3] + 1.5 * home_margin])
-                #     self.orientation = 45
+                if corner == 0:  # Bottom left
+                    self.home = np.array([self.corners[0][0] + home_margin,
+                                          self.corners[1][0] + 1.5 * home_margin])
+                    self.orientation = 135
+                elif corner == 1:  # Bottom right
+                    self.home = np.array([self.corners[0][1] + home_margin,
+                                          self.corners[1][1] + home_margin])
+                    self.orientation = 225
+                elif corner == 2:  # Top right
+                    self.home = np.array([self.corners[0][2] + home_margin,
+                                          self.corners[1][2] - 1.5 * home_margin])
+                    self.orientation = 315
+                elif corner == 3:
+                    self.home = np.array([self.corners[0][3] + home_margin,
+                                          self.corners[1][3] - home_margin])
+                    self.orientation = 45
 
         def plot_drone_home(self):
             """
