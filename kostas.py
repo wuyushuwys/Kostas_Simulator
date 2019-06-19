@@ -552,14 +552,14 @@ class Simulation:
                                   corners=self.environment.corners, std_person=0))
         return person
 
-    def __init__(self):
+    def __init__(self, plot_flag):
         my_path = os.path.abspath(os.path.dirname(__file__))
 
         self.environment = self.Environment(os.path.join(my_path, "./Kostas Research Center 2.png"),
                                             corners=np.array([[111, 408, 300, 7], [43, 127, 517, 435]]),
                                             downsampling=6,               # downsampling parameter
                                             acceleration=30,              # acceleration parameter
-                                            plot_flag=True,               # plot flag
+                                            plot_flag=plot_flag,          # plot flag
                                             max_time=100)                 # max running time
         self.general_mission_parameters = \
                 self.GeneralMissionParameters(name="Random_action",
@@ -571,7 +571,7 @@ class Simulation:
                                               num_simple_actions=6,  # Number of simple actions for the 'Random_action' mode
                                               num_people=3,
                                               num_drones=6)
-        self.drone = self.generate_drones()
+        self.drones = self.generate_drones()
         self.person = self.generate_people()
         self.reward = self.Reward()
         self.data_per_step = list()
@@ -590,13 +590,13 @@ class Simulation:
                          c='k', LineWidth=1)
 
         # Plotting Drone properties
-        for drone_idx in range(min(self.general_mission_parameters.num_drones, len(self.drone))):
+        for drone_idx in range(min(self.general_mission_parameters.num_drones, len(self.drones))):
             if self.environment.plot_flag:
-                self.drone[drone_idx].plot_drone_home()
+                self.drones[drone_idx].plot_drone_home()
             # Check if the drone is inside the cage
-            boundary_check = self.drone[drone_idx].check_boundaries()
+            boundary_check = self.drones[drone_idx].check_boundaries()
             if not boundary_check:  # If it is not in the cage, status_net goes to 0 and gets stopped
-                if not self.drone[drone_idx].mode.actual == 'Off':
+                if not self.drones[drone_idx].mode.actual == 'Off':
                     if len(self.data_per_step) == 0:
                         print("Drone {} is out of the KRI cage!"
                               .format(drone_idx))
@@ -606,60 +606,60 @@ class Simulation:
                               .format(drone_idx))
                     # If the drone is out of the range, disconnet from the net,
                     # stop it and turn of the camera
-                    self.drone[drone_idx].status_net = False
-                    self.drone[drone_idx].mode.actual = 'Off'
-                    self.drone[drone_idx].speed = 0
-                    self.drone[drone_idx].vision = 0 * self.drone[drone_idx].vision
-                    self.drone[drone_idx].vision_on = False
+                    self.drones[drone_idx].status_net = False
+                    self.drones[drone_idx].mode.actual = 'Off'
+                    self.drones[drone_idx].speed = 0
+                    self.drones[drone_idx].vision = 0 * self.drones[drone_idx].vision
+                    self.drones[drone_idx].vision_on = False
                 if self.environment.plot_flag:
-                    plt.plot(self.drone[drone_idx].position[0], self.drone[drone_idx].position[1],
+                    plt.plot(self.drones[drone_idx].position[0], self.drones[drone_idx].position[1],
                              'ks', markersize=6, fillstyle='none')
             elif self.environment.plot_flag:
                 # Color for the status of the drone
-                self.drone[drone_idx].plot_status()
+                self.drones[drone_idx].plot_status()
 
             # Speed
             if self.environment.plot_flag:
-                self.drone[drone_idx].plot_velocity()
+                self.drones[drone_idx].plot_velocity()
 
             # Angular vision
-            self.drone[drone_idx].vision = np.zeros(shape=(self.environment.X_pos.shape[0],
+            self.drones[drone_idx].vision = np.zeros(shape=(self.environment.X_pos.shape[0],
                                                            self.environment.X_pos.shape[1]))
-            if self.drone[drone_idx].vision_on:  # If the camera is on, but it can be off with some probability
-                self.drone[drone_idx].vision[(self.environment.X_pos - self.drone[drone_idx].position[0]) ** 2
-                                        + (self.environment.Y_pos - self.drone[drone_idx].position[1]) ** 2
-                                        < self.drone[drone_idx].radius_vision ** 2] =\
-                    float(((np.sign(np.random.rand(1) - self.drone[drone_idx].p_camera_off) + 1) / 2))
-                if (180 <= np.mod(self.drone[drone_idx].orientation - self.drone[drone_idx].angular_vision / 2, 360)) \
-                        and (np.mod(self.drone[drone_idx].orientation -
-                                    self.drone[drone_idx].angular_vision / 2, 360) < 360):
-                    self.drone[drone_idx].vision[
-                        self.environment.Y_pos > np.tan(np.deg2rad(90 + self.drone[drone_idx].orientation -
-                                                              self.drone[drone_idx].angular_vision / 2)) * (
-                                self.environment.X_pos - self.drone[drone_idx].position[0]) +
-                        self.drone[drone_idx].position[1]] = 0
+            if self.drones[drone_idx].vision_on:  # If the camera is on, but it can be off with some probability
+                self.drones[drone_idx].vision[(self.environment.X_pos - self.drones[drone_idx].position[0]) ** 2
+                                        + (self.environment.Y_pos - self.drones[drone_idx].position[1]) ** 2
+                                        < self.drones[drone_idx].radius_vision ** 2] =\
+                    float(((np.sign(np.random.rand(1) - self.drones[drone_idx].p_camera_off) + 1) / 2))
+                if (180 <= np.mod(self.drones[drone_idx].orientation - self.drones[drone_idx].angular_vision / 2, 360)) \
+                        and (np.mod(self.drones[drone_idx].orientation -
+                                    self.drones[drone_idx].angular_vision / 2, 360) < 360):
+                    self.drones[drone_idx].vision[
+                        self.environment.Y_pos > np.tan(np.deg2rad(90 + self.drones[drone_idx].orientation -
+                                                              self.drones[drone_idx].angular_vision / 2)) * (
+                                self.environment.X_pos - self.drones[drone_idx].position[0]) +
+                        self.drones[drone_idx].position[1]] = 0
                 else:
-                    self.drone[drone_idx].vision[
-                        self.environment.Y_pos < np.tan(np.deg2rad(90 + self.drone[drone_idx].orientation -
-                                                  self.drone[drone_idx].angular_vision / 2)) * (
-                                    self.environment.X_pos - self.drone[drone_idx].position[0]) +
-                        self.drone[drone_idx].position[1]] = 0
-                if (0 <= np.mod(self.drone[drone_idx].orientation + self.drone[drone_idx].angular_vision / 2, 360)) and (
-                        np.mod(self.drone[drone_idx].orientation + self.drone[drone_idx].angular_vision / 2, 360) < 180):
-                    self.drone[drone_idx].vision[
-                        self.environment.Y_pos > np.tan(np.deg2rad(90 + self.drone[drone_idx].orientation +
-                                                              self.drone[drone_idx].angular_vision / 2)) * (
-                                    self.environment.X_pos - self.drone[drone_idx].position[0]) +
-                        self.drone[drone_idx].position[1]] = 0
+                    self.drones[drone_idx].vision[
+                        self.environment.Y_pos < np.tan(np.deg2rad(90 + self.drones[drone_idx].orientation -
+                                                  self.drones[drone_idx].angular_vision / 2)) * (
+                                    self.environment.X_pos - self.drones[drone_idx].position[0]) +
+                        self.drones[drone_idx].position[1]] = 0
+                if (0 <= np.mod(self.drones[drone_idx].orientation + self.drones[drone_idx].angular_vision / 2, 360)) and (
+                        np.mod(self.drones[drone_idx].orientation + self.drones[drone_idx].angular_vision / 2, 360) < 180):
+                    self.drones[drone_idx].vision[
+                        self.environment.Y_pos > np.tan(np.deg2rad(90 + self.drones[drone_idx].orientation +
+                                                              self.drones[drone_idx].angular_vision / 2)) * (
+                                    self.environment.X_pos - self.drones[drone_idx].position[0]) +
+                        self.drones[drone_idx].position[1]] = 0
                 else:
-                    self.drone[drone_idx].vision[
-                        self.environment.Y_pos < np.tan(np.deg2rad(90 + self.drone[drone_idx].orientation +
-                                                              self.drone[drone_idx].angular_vision / 2)) * (
-                                    self.environment.X_pos - self.drone[drone_idx].position[0]) +
-                        self.drone[drone_idx].position[1]] = 0
+                    self.drones[drone_idx].vision[
+                        self.environment.Y_pos < np.tan(np.deg2rad(90 + self.drones[drone_idx].orientation +
+                                                              self.drones[drone_idx].angular_vision / 2)) * (
+                                    self.environment.X_pos - self.drones[drone_idx].position[0]) +
+                        self.drones[drone_idx].position[1]] = 0
                 if self.environment.plot_flag:
-                    self.drone[drone_idx].plot_vision()
-                if sum(sum(self.drone[drone_idx].vision)) != 0:
+                    self.drones[drone_idx].plot_vision()
+                if sum(sum(self.drones[drone_idx].vision)) != 0:
                     self.reward.total -= self.reward.cost_camera_use
 
         # Plotting people
@@ -673,52 +673,52 @@ class Simulation:
 
         # Detection
         self.data_per_step.append([])
-        for drone_idx in range(min(self.general_mission_parameters.num_drones, len(self.drone))):
-            Detected_objects, position_people = self.drone[drone_idx].detect_person(self.person)
+        for drone_idx in range(min(self.general_mission_parameters.num_drones, len(self.drones))):
+            Detected_objects, position_people = self.drones[drone_idx].detect_person(self.person)
             if Detected_objects > 0:
                 self.general_mission_parameters.position_people = position_people
                 num_ppl_detected = sum((np.sign(np.random.rand(1, Detected_objects) -
-                                                self.drone[drone_idx].p_misdetection) + 1) / 2)[0]
+                                                self.drones[drone_idx].p_misdetection) + 1) / 2)[0]
                 print("Drone {} detected {} people out of {} objects detected"
                       .format(drone_idx, int(num_ppl_detected), Detected_objects))
                 if num_ppl_detected > 0:
-                    self.mission_update(self.drone, drone_idx, self.general_mission_parameters, self.reward)
-            self.data_per_step[-1].append((self.drone[drone_idx].index,
-                                           self.drone[drone_idx].mode.actual,
-                                           self.drone[drone_idx].status_net,
-                                           (self.drone[drone_idx].position[0], self.drone[drone_idx].position[1]),
-                                           np.mod(self.drone[drone_idx].direction, 360),
-                                           np.mod(self.drone[drone_idx].orientation, 360),
-                                           self.drone[drone_idx].speed,
+                    self.mission_update(self.drones, drone_idx, self.general_mission_parameters, self.reward)
+            self.data_per_step[-1].append((self.drones[drone_idx].index,
+                                           self.drones[drone_idx].mode.actual,
+                                           self.drones[drone_idx].status_net,
+                                           (self.drones[drone_idx].position[0], self.drones[drone_idx].position[1]),
+                                           np.mod(self.drones[drone_idx].direction, 360),
+                                           np.mod(self.drones[drone_idx].orientation, 360),
+                                           self.drones[drone_idx].speed,
                                            position_people))
         self.data_per_step[-1].append(self.reward.total)
 
         # Action
-        for drone_idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drone))):
-            self.drone[drone_idx].action(self.general_mission_parameters)
+        for drone_idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
+            self.drones[drone_idx].action(self.general_mission_parameters)
 
         # Drone Updates with random variables
-        for drone_idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drone))):
-            if self.drone[drone_idx].mode.actual != 'Off':  # Update only if the drone is not off
+        for drone_idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
+            if self.drones[drone_idx].mode.actual != 'Off':  # Update only if the drone is not off
                 # It disconnects with a Bernoulli(p_disconnection)
-                self.drone[drone_idx].status_net = bool((np.sign(np.random.rand(1) -
-                                                                 self.drone[drone_idx].p_disconnection) + 1) / 2)
-                if not ((self.drone[drone_idx].mode.actual == 'Disarm') or (
-                        self.drone[drone_idx].mode.actual == 'Arm')):  # If the drone is flying
+                self.drones[drone_idx].status_net = bool((np.sign(np.random.rand(1) -
+                                                                 self.drones[drone_idx].p_disconnection) + 1) / 2)
+                if not ((self.drones[drone_idx].mode.actual == 'Disarm') or (
+                        self.drones[drone_idx].mode.actual == 'Arm')):  # If the drone is flying
                     # Same orientation plus a random from N(0,1)
-                    self.drone[drone_idx].orientation += self.drone[drone_idx].std_drone * np.random.normal()
+                    self.drones[drone_idx].orientation += self.drones[drone_idx].std_drone * np.random.normal()
                     # Same direction plus a random from N(0,1)
-                    self.drone[drone_idx].direction += self.drone[drone_idx].std_drone * np.random.normal()
+                    self.drones[drone_idx].direction += self.drones[drone_idx].std_drone * np.random.normal()
                     # If the drone changed the flying mode, do not move while planning the new mode
-                    if self.drone[drone_idx].mode.previous == self.drone[drone_idx].mode.actual:
+                    if self.drones[drone_idx].mode.previous == self.drones[drone_idx].mode.actual:
                         # New position = previous position + speed/s x 1s
-                        self.drone[drone_idx].position = self.drone[drone_idx].position + np.array(
-                            [self.drone[drone_idx].speed * np.cos(np.deg2rad(self.drone[drone_idx].direction - 90)),
-                             self.drone[drone_idx].speed * np.sin(np.deg2rad(self.drone[drone_idx].direction - 90))])
+                        self.drones[drone_idx].position = self.drones[drone_idx].position + np.array(
+                            [self.drones[drone_idx].speed * np.cos(np.deg2rad(self.drones[drone_idx].direction - 90)),
+                             self.drones[drone_idx].speed * np.sin(np.deg2rad(self.drones[drone_idx].direction - 90))])
                         self.reward.total -= self.reward.cost_movenent
-                    self.drone[drone_idx].speed = self.drone[drone_idx].speed + \
-                                                  self.drone[drone_idx].std_drone * np.random.normal(0, 1)
-            self.drone[drone_idx].mode.previous = self.drone[drone_idx].mode.actual
+                    self.drones[drone_idx].speed = self.drones[drone_idx].speed + \
+                                                  self.drones[drone_idx].std_drone * np.random.normal(0, 1)
+            self.drones[drone_idx].mode.previous = self.drones[drone_idx].mode.actual
 
         # People updates with random variables
         for person_idx in range(0, min(self.general_mission_parameters.num_people, len(self.person))):
