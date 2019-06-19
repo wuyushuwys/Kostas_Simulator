@@ -4,9 +4,7 @@ from time import time, sleep
 import cv2
 import pandas as pd
 import argparse
-
-
-
+import os.path
 
 class Simulation:
     class Environment:
@@ -555,7 +553,9 @@ class Simulation:
         return person
 
     def __init__(self):
-        self.environment = self.Environment("./Kostas Research Center 2.png",
+        my_path = os.path.abspath(os.path.dirname(__file__))
+
+        self.environment = self.Environment(os.path.join(my_path, "./Kostas Research Center 2.png"),
                                             corners=np.array([[111, 408, 300, 7], [43, 127, 517, 435]]),
                                             downsampling=6,               # downsampling parameter
                                             acceleration=30,              # acceleration parameter
