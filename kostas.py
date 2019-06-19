@@ -14,6 +14,8 @@ class Simulation:
             self.corners = (corners / downsampling).astype(float)
             self.x_pos = range(self.background.shape[1])  # Dimensions of the picture
             self.y_pos = range(self.background.shape[0])
+            self.max_x_pos = self.background.shape[1]
+            self.max_y_pos = self.background.shape[0]
             self.X_pos, self.Y_pos = np.meshgrid(self.x_pos, self.y_pos)
             self.downsampling = downsampling
             self.acceleration = acceleration
@@ -729,8 +731,10 @@ class Simulation:
             plt.show()
             sleep(max(1 / self.environment.acceleration - (time() - time_start), 0))
 
-        return self.data_per_step[-1][0:-1], self.reward.total
+        # Check if mission is done
+        is_done = self.general_mission_parameters.accomplished
 
+        return self.data_per_step[-1][0:-1], self.reward.total, is_done
 
 
 if __name__ == "__main__":
