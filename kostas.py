@@ -22,13 +22,22 @@ class Simulation:
 
     # general_mission_parameters
     class GeneralMissionParameters:
-        def __init__(self, name, action_id=None, isDebug=False,
+        def __init__(self, name, drone_placed_pattern=0, action_id=None, isDebug=False,
                      accomplished=False, distance_thres=0, position_detected=[],
                      position_people=np.array([]), speed=0.0, num_simple_actions=0, num_drones=0, num_people=0):
             """
             distance_thres: Threshold of the distance to consider the drone is in a specific point
+            Home position for the drone
+            placed_pattern:
+                0 --> Random position within the cage
+                1 --> Distributed over one edge
+                2 --> Distributed over all edges
+                3 --> Starting from one corner
+                4 --> Starting from all corner
             """
+
             self.name = name  # Name of mission
+            self.drone_placed_pattern = drone_placed_pattern
             if name == "Random_action":
                 self.mission_actual = name  # Random Generation Flag
             else:
@@ -144,8 +153,8 @@ class Simulation:
                 self.parameters_destination = np.array(parameters_destination)
                 self.parameters_detection = parameters_detection
 
-        def __init__(self, index=0, status_net=True, mode=Mode(),
-                     home=np.array([]), position=np.array([]), orientation=0, direction=0,
+        def __init__(self,placed_pattern=0, dowmsampling=6, index=0, status_net=True, mode=Mode(),
+                     home=np.array([]), orientation=0,
                      speed=0.0, vision=np.array([]), vision_on=True, corners=np.array([]),
                      radius_vision=0.0, angular_vision=0.0, std_drone=0.0,
                      p_disconnection=0.0, p_misdetection=0.1, p_package_lost=0.05, p_camera_off=0.0):
@@ -164,18 +173,9 @@ class Simulation:
             self.status_net = status_net
             self.mode = mode
             self.corners = corners
-            # generate in cage random position
-            if mode.actual is 'Random_action':
-                in_cage = 0.0
-                while in_cage == 0.0:
-                    self.home = np.array([np.random.randint(min(self.corners[0]), max(self.corners[0])),
-                                          np.random.randint(min(self.corners[0]), max(self.corners[1]))])
-                    in_cage = self.check_boundaries(is_home=True)
-                    self.orientation = np.random.randint(360)
-            else:
-                self.home = np.array(home)
+            self.home_position(placed_pattern, dowmsampling)
             self.position = self.home
-            self.orientation = orientation
+            # self.orientation = orientation
             # self.orientation = np.random.randint(360)
             self.direction = self.orientation
             self.speed = speed
@@ -191,6 +191,95 @@ class Simulation:
             self.p_misdetection = p_misdetection  # Probability of not identifying a person when a person is on range
             self.p_package_lost = p_package_lost  # Probability of lossing a package of information among the drones
             self.p_camera_off = p_camera_off  # Probability of turning off the camera and not searching
+
+        def home_position(self,placed_pattern, downsampling):
+            """
+            Home position for the drone
+            :param placed_pattern:
+                0 --> Random position within the cage
+                1 --> Distributed over one edge
+                2 --> Distributed over all edges
+                3 --> Starting from one corner
+                4 --> Starting from all corner
+            :param downsampling: down-sampling value for home margin
+            :return:
+            """
+            home_margin = 6.66/downsampling
+            if placed_pattern == 0:
+                in_cage = 0.0
+                while in_cage == 0.0:
+                    self.home = np.array([np.random.randint(min(self.corners[0]), max(self.corners[0])),
+                                          np.random.randint(min(self.corners[0]), max(self.corners[1]))])
+                    in_cage = self.check_boundaries(is_home=True)
+                    self.orientation = np.random.randint(360)
+            elif placed_pattern == 1:  # Distributed over one edge (bottom edge)
+                aux = np.random.randint(round(self.corners[0][1]-self.corners[0][0] - 2 * home_margin)) +\
+                      self.corners[0][0] + home_margin
+                self.home = np.array([aux,
+                                      (self.corners[1][1]-self.corners[1][0])/(self.corners[0][1] - self.corners[0][0])*
+                                      (aux-self.corners[0][0])+self.corners[1][0]+home_margin])
+                self.orientation = 180
+            elif placed_pattern == 2:  # Distributed over all edges randomly
+                edge = np.random.randint(4)
+                if edge == 0:  # bottom
+                    aux = np.random.randint(round(self.corners[0][1] - self.corners[0][0] - 2 * home_margin)) +\
+                          self.corners[0][0] + home_margin
+                    self.home = np.array([aux,
+                                          (self.corners[1][1] - self.corners[1][0]) / (
+                                                      self.corners[0][1] - self.corners[0][0]) *
+                                          (aux - self.corners[0][0]) + self.corners[1][0] + home_margin])
+                    self.orientation = 180
+                elif edge == 1:  # right
+                    aux = np.random.randint(round(self.corners[0][1] - self.corners[0][2] - 2 * home_margin)) + \
+                          self.corners[0][2] + home_margin
+                    self.home = np.array([aux,
+                                          (self.corners[1][1] - self.corners[1][2]) / (
+                                                      self.corners[0][1] - self.corners[0][2]) *
+                                          (aux - self.corners[0][2] + home_margin) + self.corners[1][2] ])
+                    self.orientation = 270
+                elif edge == 2:  # top
+                    aux = np.random.randint(round(self.corners[0][2] - self.corners[0][3] - 2 * home_margin)) + \
+                          self.corners[0][3] + home_margin
+                    self.home = np.array([aux,
+                                          (self.corners[1][2] - self.corners[1][3]) / (
+                                                      self.corners[0][2] - self.corners[0][3]) *
+                                          (aux - self.corners[0][3]) + self.corners[1][3] - home_margin])
+                    self.orientation = 0
+                elif edge == 3:  # left
+                    aux = np.random.randint(round(self.corners[0][0] - self.corners[0][3] - 2 * home_margin)) + \
+                          self.corners[0][3] + home_margin
+                    self.home = np.array([aux,
+                                          (self.corners[0][1] - self.corners[1][3]) / (
+                                                  self.corners[0][0] - self.corners[0][3]) *
+                                          (aux - self.corners[0][3] - home_margin) + self.corners[1][3]])
+                    self.orientation = 90
+            elif placed_pattern == 3:  # Starting from one corner (left bottom)
+                self.home = np.array([self.corners[0][0] + home_margin,
+                                      self.corners[1][0] + 1.5 * home_margin])
+                self.orientation = 135
+            elif placed_pattern == 4:  # Starting from all corners randomly
+                corner = np.random.randint(4)
+                self.home = np.array([self.corners[0][corner] + home_margin,
+                                      self.corners[1][corner] + 1.5 * home_margin])
+                ori = [135, 225, 315, 45]
+                self.orientation = ori[corner]
+
+                # if corner == 0:  # Bottom left
+                #     self.home = np.array([self.corners[0][0] + home_margin,
+                #                           self.corners[1][0] + 1.5 * home_margin])
+                #     self.orientation = 135
+                # elif corner == 1:  # Bottom right
+                #     self.home = np.array([self.corners[0][1] + home_margin,
+                #                           self.corners[1][1] + 1.5 * home_margin])
+                #     self.orientation = 225
+                # elif corner == 2:  # Top right
+                #     self.home = np.array([self.corners[0][2] + home_margin,
+                #                           self.corners[1][2] + 1.5 * home_margin])
+                #     self.orientation = 315
+                # elif corner == 3:
+                #     self.home = np.array([self.corners[0][3] + home_margin,
+                #                           self.corners[1][3] + 1.5 * home_margin])
+                #     self.orientation = 45
 
         def plot_drone_home(self):
             """
@@ -479,7 +568,8 @@ class Simulation:
         # Create the drone structures
         drone = list()
         # drone 0
-        drone.append(self.Drone(index=0, status_net=True,
+        drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=0, status_net=True,
+                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -491,7 +581,8 @@ class Simulation:
                                 std_drone=0.1,  # Standard deviation for the movement of the drone
                                 vision_on=True, corners=self.environment.corners))
         # drone 1
-        drone.append(self.Drone(index=1, status_net=True,
+        drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=1, status_net=True,
+                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -503,7 +594,8 @@ class Simulation:
                                 std_drone=0.1,  # Standard deviation for the movement of the drone
                                 vision_on=True, corners=self.environment.corners))
         # drone 2
-        drone.append(self.Drone(index=2, status_net=True,
+        drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=2, status_net=True,
+                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -515,7 +607,8 @@ class Simulation:
                                 std_drone=0.1,  # Standard deviation for the movement of the drone
                                 vision_on=True, corners=self.environment.corners))
         # drone 3
-        drone.append(self.Drone(index=3, status_net=True,
+        drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=3, status_net=True,
+                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -527,7 +620,8 @@ class Simulation:
                                 std_drone=0.1,  # Standard deviation for the movement of the drone
                                 vision_on=True, corners=self.environment.corners))
         # drone 4
-        drone.append(self.Drone(index=4, status_net=True,
+        drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=4, status_net=True,
+                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -539,7 +633,8 @@ class Simulation:
                                 std_drone=0.1,  # Standard deviation for the movement of the drone
                                 vision_on=True, corners=self.environment.corners))
         # drone 5
-        drone.append(self.Drone(index=5, status_net=True,
+        drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=5, status_net=True,
+                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -566,7 +661,19 @@ class Simulation:
                                   corners=self.environment.corners, std_person=0))
         return person
 
-    def __init__(self, plot_flag=False, downsampling=6, acceleration=30, max_time=900):
+    def __init__(self, plot_flag=False, downsampling=6, acceleration=8, max_time=900, drone_placed_pattern=0):
+        """
+        :param plot_flag:
+        :param downsampling:
+        :param acceleration:
+        :param max_time:
+        :param drone_placed_pattern:
+                0 --> Random position within the cage
+                1 --> Distributed over one edge
+                2 --> Distributed over all edges
+                3 --> Starting from one corner
+                4 --> Starting from all corner
+        """
         my_path = os.path.abspath(os.path.dirname(__file__))
 
         self.environment = self.Environment(os.path.join(my_path, "./Kostas Research Center 2.png"),
@@ -577,6 +684,7 @@ class Simulation:
                                             max_time=max_time)                      # max running time
         self.general_mission_parameters = \
             self.GeneralMissionParameters(name="Random_action",
+                                          drone_placed_pattern=drone_placed_pattern,
                                           isDebug=True,
                                           accomplished=False,  # The mission has not been accomplished at the beginning
                                           distance_thres=5,
@@ -759,8 +867,16 @@ if __name__ == "__main__":
     # args = parse.parse_args()
 
     # Simutation begin
+    """
+    drone_placed_pattern:
+        0 --> Random position within the cage
+        1 --> Distributed over one edge
+        2 --> Distributed over all edges
+        3 --> Starting from one corner
+        4 --> Starting from all corner
+    """
 
-    simulation = Simulation(plot_flag=False, max_time=900)
+    simulation = Simulation(plot_flag=True, max_time=100, drone_placed_pattern=1)
     print("SIMULATION STARTS")
     t = time()
     times = 1
@@ -782,12 +898,11 @@ if __name__ == "__main__":
          orientation, 
          position_people       --> list of tuple contains people that have been detected by the drone currently
          )
-         The tuple above is stand for one drone's OB, thus we have 6(the number of drone) tuples to indicate the drone's
+         The tuple above is stand for one drone's ob, thus we have 6(the number of drone) tuples to indicate the drone's
          OB.
-         the re(reward) is the total reward upto now 
+         the re(reward) is the step reward 
         """
         ob, re = simulation.step(action_id=None)
-        print(re)
         times += 1
     if times >= simulation.environment.max_time:
         print("Drones run out of battery")
