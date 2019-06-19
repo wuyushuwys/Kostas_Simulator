@@ -703,10 +703,6 @@ class Simulation:
     def step(self, action_id=None):
         old_total_reward = self.reward.total
         self.general_mission_parameters.action_id = action_id
-        # while times < max_times and not general_mission_parameters.accomplished:
-        plt.close()
-        plt.figure()
-        # time_start = time()
         plt.imshow(self.environment.background, origin='lower')
         if self.environment.plot_flag:
             for i in range(4):
@@ -852,22 +848,26 @@ class Simulation:
         for person_idx in range(0, min(self.general_mission_parameters.num_people, len(self.person))):
             self.person[person_idx].random_walk()
 
-        if self.environment.plot_flag:
-            plt.title("Time stamp {}, Reward = {}".format(times, self.reward.total))
-            plt.show()
-            sleep(max(1 / self.environment.acceleration - (time() - time_start), 0))
-
         # Check if mission is done
         is_done = self.general_mission_parameters.accomplished
         return self.data_per_step[-1][0:-1], self.reward.total - old_total_reward, is_done
 
+
 if __name__ == "__main__":
-    # parse = argparse.ArgumentParser(description="Kostas Simulator")
-    # parse.add_argument('max_time',type=int, default=900, help="max running time")
-    # parse.add_argument('plot_flag',type=bool, default=True, help="plotting flag")
-    # parse.add_argument('acceleration',type=int, default=30, help="acceleration value")
-    # parse.add_argument('isDebug',type=bool, default=True, help="whether assign random action id by random variable")
-    # args = parse.parse_args()
+    parse = argparse.ArgumentParser(description="Kostas Simulator",
+                                    usage='use "%(prog)s --help" for more information',
+                                    formatter_class=argparse.RawTextHelpFormatter)
+    parse.add_argument('--max_time',type=int, default=900, help="max running time")
+    parse.add_argument('--plot_flag',type=bool, default=True, help="plotting flag")
+    parse.add_argument('--acceleration',type=int, default=30, help="acceleration value")
+    parse.add_argument('--drone_placed_pattern',type=int, default=0,
+                       help="""drone_placed_pattern:  ##\n\
+                       ##0 --> Random position within the cage\n\
+                       ##1 --> Distributed over one edge\n\
+                       ##2 --> Distributed over all edges\n\
+                       ##3 --> Starting from one corner\n\
+                       ##4 --> Starting from all corner""")
+    args = parse.parse_args()
 
     # Simutation begin
     """
@@ -879,7 +879,9 @@ if __name__ == "__main__":
         4 --> Starting from all corner
     """
 
-    simulation = Simulation(plot_flag=True, max_time=100, drone_placed_pattern=1)
+    simulation = Simulation(plot_flag=args.plot_flag,
+                            max_time=args.max_time,
+                            drone_placed_pattern=args.drone_placed_pattern)
     print("SIMULATION STARTS")
     t = time()
     times = 1
@@ -887,8 +889,10 @@ if __name__ == "__main__":
     for person_idx in range(min(simulation.general_mission_parameters.num_people, len(simulation.person))):
         print("({})".format(simulation.person[person_idx].position))
     print('Mission when locating a person: ' + simulation.general_mission_parameters.name)
-
+    fig, ax = plt.subplots()
+    fig.show()
     while times < simulation.environment.max_time and not simulation.general_mission_parameters.accomplished:
+        ax.clear()
         time_start = time()
         """
         the ob(observations) is an list of tuple, which refer the observation of current time, in the format of
@@ -905,7 +909,12 @@ if __name__ == "__main__":
          OB.
          the re(reward) is the step reward 
         """
-        ob, re = simulation.step(action_id=None)
+        ob, re, done_flag = simulation.step(action_id=None)
+        if simulation.environment.plot_flag:
+            plt.title("Time stamp {}, Step Reward = {}".format(times, re))
+            plt.xlabel("Total Reward {}".format(simulation.reward.total))
+            fig.canvas.draw()
+            plt.pause(max(1 / simulation.environment.acceleration - (time() - time_start), 0.1))
         times += 1
     if times >= simulation.environment.max_time:
         print("Drones run out of battery")
@@ -916,3 +925,6 @@ if __name__ == "__main__":
     file = pd.DataFrame(simulation.data_per_step)
     file.to_csv('./all_data.csv', sep=',', index=False)
     print('All data have been saved in all_data.csv\nEnd')
+    # Keep the plot when simulation finished
+    if simulation.environment.plot_flag:
+        plt.show(block=True)
