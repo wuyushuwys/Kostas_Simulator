@@ -552,31 +552,32 @@ class Simulation:
                                   corners=self.environment.corners, std_person=0))
         return person
 
-    def __init__(self, plot_flag):
+    def __init__(self, plot_flag=False, downsampling=6, acceleration=30, max_time=900):
         my_path = os.path.abspath(os.path.dirname(__file__))
 
         self.environment = self.Environment(os.path.join(my_path, "./Kostas Research Center 2.png"),
                                             corners=np.array([[111, 408, 300, 7], [43, 127, 517, 435]]),
-                                            downsampling=6,               # downsampling parameter
-                                            acceleration=30,              # acceleration parameter
+                                            downsampling=downsampling,               # downsampling parameter
+                                            acceleration=acceleration,              # acceleration parameter
                                             plot_flag=plot_flag,          # plot flag
-                                            max_time=100)                 # max running time
+                                            max_time=max_time)                 # max running time
         self.general_mission_parameters = \
-                self.GeneralMissionParameters(name="Random_action",
-                                              isDebug=True,
-                                              accomplished=False,  # The mission has not been accomplished at the beginning
-                                              distance_thres=5,
-                                              speed=(20 / 3) / self.environment.downsampling,  # Default speed for the drones,
-                                              # equivalent to 1m/s
-                                              num_simple_actions=6,  # Number of simple actions for the 'Random_action' mode
-                                              num_people=3,
-                                              num_drones=6)
+            self.GeneralMissionParameters(name="Random_action",
+                                          isDebug=True,
+                                          accomplished=False,  # The mission has not been accomplished at the beginning
+                                          distance_thres=5,
+                                          speed=(20 / 3) / self.environment.downsampling,  # Default speed for the drones,
+                                          # equivalent to 1m/s
+                                          num_simple_actions=6,  # Number of simple actions for the 'Random_action' mode
+                                          num_people=3,
+                                          num_drones=6)
         self.drones = self.generate_drones()
         self.person = self.generate_people()
         self.reward = self.Reward()
         self.data_per_step = list()
 
     def step(self, action_id=None):
+        old_total_reward = self.reward.total
         self.general_mission_parameters.action_id = action_id
         # while times < max_times and not general_mission_parameters.accomplished:
         plt.close()
@@ -729,7 +730,7 @@ class Simulation:
             plt.show()
             sleep(max(1 / self.environment.acceleration - (time() - time_start), 0))
 
-        return self.data_per_step[-1][0:-1], self.reward.total
+        return self.data_per_step[-1][0:-1], self.reward.total - old_total_reward
 
 
 
@@ -774,7 +775,7 @@ if __name__ == "__main__":
 
     # Simutation begin
 
-    simulation = Simulation()
+    simulation = Simulation(plot_flag=False, max_time=900)
     print("SIMULATION STARTS")
     t = time()
     times = 1
@@ -801,6 +802,7 @@ if __name__ == "__main__":
          the re(reward) is the total reward upto now 
         """
         ob, re = simulation.step(action_id=None)
+        print(re)
         times += 1
     if times >= simulation.environment.max_time:
         print("Drones run out of battery")
