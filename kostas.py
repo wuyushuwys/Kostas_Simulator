@@ -381,88 +381,88 @@ class Simulation:
                 self.speed = 0
 
     # Function
-    def mission_update(self, drone, drone_idx, mission_parameters, reward):
-        if mission_parameters.name == 'Ignore':  # Ignore the detection and continue with the previous status
+    def mission_update(self, drone_idx):
+        if self.general_mission_parameters.name == 'Ignore':  # Ignore the detection and continue with the previous status
             # drone_out = deepcopy(drone_in)
             pass
-        elif mission_parameters.name == 'RTL':  # Send the drones back to their launched point
+        elif self.general_mission_parameters.name == 'RTL':  # Send the drones back to their launched point
             # drone_out = deepcopy(drone_in)
             # If the drone that detects the person is not on the net,
             # do not transmit any information to the remaining drones
-            if not drone[drone_idx].status_net:
-                drone[drone_idx].mode.actual = 'RTL'
+            if not self.drones[drone_idx].status_net:
+                self.drones[drone_idx].mode.actual = 'RTL'
                 print("Drone {} is returning to launch".format(drone_idx))
                 # Update the parameters of the mission. In this case, the destination position is the home position.
-                drone[drone_idx].mode.parameters_destination = drone[drone_idx].home
-                drone[drone_idx].vision_on = False  # Set the camera off when returning to launch
+                self.drones[drone_idx].mode.parameters_destination = self.drones[drone_idx].home
+                self.drones[drone_idx].vision_on = False  # Set the camera off when returning to launch
             else:
-                reward.total -= reward.cost_communications  # If the drone is in the net, it transmits a package that reduces 1 point the reward
-                for idx in range(0, min(mission_parameters.num_drones, len(drone))):
+                self.reward.total -= self.reward.cost_communications  # If the drone is in the net, it transmits a package that reduces 1 point the reward
+                for idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
                     if idx == drone_idx:  # The drone that detects the person updates its mission
-                        drone[idx].mode.actual = 'RTL'
+                        self.drones[idx].mode.actual = 'RTL'
                         print("Drone {} is returning to launch".format(idx))
                         # Update the parameters of the mission. In this case, the destination position is the home position.
-                        drone[idx].mode.parameters_destination = drone[idx].home
-                        drone[idx].vision_on = False  # Set the camera off when returning to launch
+                        self.drones[idx].mode.parameters_destination = self.drones[idx].home
+                        self.drones[idx].vision_on = False  # Set the camera off when returning to launch
                     else:
-                        if drone[idx].status_net:
-                            send_package = ((np.sign(np.random.rand(1) - drone[idx].p_package_lost) + 1) / 2)[0]
+                        if self.drones[idx].status_net:
+                            send_package = ((np.sign(np.random.rand(1) - self.drones[idx].p_package_lost) + 1) / 2)[0]
                             if send_package == 1:
-                                drone[idx].mode.actual = 'RTL'
+                                self.drones[idx].mode.actual = 'RTL'
                                 print("Drone {} is returning to launch".format(idx))
                                 # Update the parameters of the mission. In this case, the
                                 # destination position is the home position.
-                                drone[idx].mode.parameters_destination = drone[idx].home
-                                drone[idx].vision_on = False
+                                self.drones[idx].mode.parameters_destination = self.drones[idx].home
+                                self.drones[idx].vision_on = False
                             else:
                                 print("Package sent from drone {} to drone {} was lost"
                                       .format(drone_idx, idx))
-        elif mission_parameters.name == 'GoToPerson':
-            reward.total += reward.person_dectected
+        elif self.general_mission_parameters.name == 'GoToPerson':
+            self.reward.total += self.reward.person_dectected
             # drone_out = deepcopy(drone_in)  # First, all the structure of the drone is copied
             # If the drone that detects the person is not on the net,
             # do not transmit any information to the remaining drones
-            if not drone[drone_idx].status_net:
-                drone[drone_idx].mode.actual = 'GoToPerson'
+            if not self.drones[drone_idx].status_net:
+                self.drones[drone_idx].mode.actual = 'GoToPerson'
                 print("Drone {} is going to position of person detected"
                       .format(drone_idx))
-                drone[drone_idx].mode.parameters_destination = mission_parameters.position_people[0]
-                drone[drone_idx].vision_on = False  # Set the camera off when returning to launch
+                self.drones[drone_idx].mode.parameters_destination = self.general_mission_parameters.position_people[0]
+                self.drones[drone_idx].vision_on = False  # Set the camera off when returning to launch
             else:
-                reward.total -= reward.cost_communications
-                for idx in range(0, min(mission_parameters.num_drones, len(drone))):
+                self.reward.total -= self.reward.cost_communications
+                for idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
                     if idx == drone_idx:
-                        drone[idx].mode.actual = 'GoToPerson'
+                        self.drones[idx].mode.actual = 'GoToPerson'
                         print("Drone {} is going to position of person detected".format(idx))
-                        drone[idx].mode.parameters_destination = mission_parameters.position_people[0]
-                        drone[idx].vision_on = False  # Set the camera off when returning to launch
+                        self.drones[idx].mode.parameters_destination = self.general_mission_parameters.position_people[0]
+                        self.drones[idx].vision_on = False  # Set the camera off when returning to launch
                     else:
-                        if drone[idx].status_net:
-                            send_package = ((np.sign(np.random.rand(1) - drone[idx].p_package_lost) + 1) / 2)[0]
+                        if self.drones[idx].status_net:
+                            send_package = ((np.sign(np.random.rand(1) - self.drones[idx].p_package_lost) + 1) / 2)[0]
                             if send_package == 1:
-                                drone[idx].mode.actual = 'GoToPerson'
+                                self.drones[idx].mode.actual = 'GoToPerson'
                                 print("Drone {} is going to position of person detected"
                                       .format(idx))
-                                drone[idx].mode.parameters_destination = mission_parameters.position_people[0]
-                                drone[idx].vision_on = False  # Set the camera off when returning to launch
+                                self.drones[idx].mode.parameters_destination = self.general_mission_parameters.position_people[0]
+                                self.drones[idx].vision_on = False  # Set the camera off when returning to launch
                             else:
                                 print("Package sent frone drone {} to drone {} was lost"
                                       .format(drone_idx, idx))
-        elif mission_parameters.name == "Random_action":
-            drone[drone_idx].mode.parameters_detection = 0
-            for idx_ppl in range(len(mission_parameters.position_people)):
-                if mission_parameters.position_people[idx_ppl] not in mission_parameters.position_detected:
+        elif self.general_mission_parameters.name == "Random_action":
+            self.drones[drone_idx].mode.parameters_detection = 0
+            for idx_ppl in range(len(self.general_mission_parameters.position_people)):
+                if self.general_mission_parameters.position_people[idx_ppl] not in self.general_mission_parameters.position_detected:
                     print("One person was detected at position: ({},{}), for a total of {} people detected."
-                          .format(mission_parameters.position_people[idx_ppl][0],
-                                  mission_parameters.position_people[idx_ppl][1],
-                                  len(mission_parameters.position_detected)))
-                    mission_parameters.position_detected.append(mission_parameters.position_people[idx_ppl])
-                    reward.total += reward.person_dectected
-                    drone[drone_idx].mode.parameters_detection += 1
-                    if len(mission_parameters.position_detected) == mission_parameters.num_people:
+                          .format(self.general_mission_parameters.position_people[idx_ppl][0],
+                                  self.general_mission_parameters.position_people[idx_ppl][1],
+                                  len(self.general_mission_parameters.position_detected)))
+                    self.general_mission_parameters.position_detected.append(self.general_mission_parameters.position_people[idx_ppl])
+                    self.reward.total += self.reward.person_dectected
+                    self.drones[drone_idx].mode.parameters_detection += 1
+                    if len(self.general_mission_parameters.position_detected) == self.general_mission_parameters.num_people:
                         print("All {} people have been detected. \nMission accomplished!".format(
-                            mission_parameters.num_people))
-                        mission_parameters.accomplished = 1
+                            self.general_mission_parameters.num_people))
+                        self.general_mission_parameters.accomplished = True
         else:
             pass
 
@@ -683,7 +683,7 @@ class Simulation:
                 print("Drone {} detected {} people out of {} objects detected"
                       .format(drone_idx, int(num_ppl_detected), Detected_objects))
                 if num_ppl_detected > 0:
-                    self.mission_update(self.drones, drone_idx, self.general_mission_parameters, self.reward)
+                    self.mission_update(drone_idx)
             self.data_per_step[-1].append((self.drones[drone_idx].index,
                                            self.drones[drone_idx].mode.actual,
                                            self.drones[drone_idx].status_net,
@@ -806,7 +806,9 @@ if __name__ == "__main__":
         times += 1
     if times >= simulation.environment.max_time:
         print("Drones run out of battery")
-        print("Total Reward is:{}\nSIMULATION ENDS in {} seconds".format(simulation.reward.total, round(time() - t,2)))
+        print("Total Reward is:{}\nSIMULATION ENDS in {} seconds".format(simulation.reward.total, round(time() - t, 2)))
+    if simulation.general_mission_parameters.accomplished:
+        print("The total reward is {}".format(simulation.reward.total))
 
     file = pd.DataFrame(simulation.data_per_step)
     file.to_csv('./all_data.csv', sep=',', index=False)
