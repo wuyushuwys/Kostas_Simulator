@@ -4,7 +4,7 @@
 - Add different drone placed pattern
 - Add Simulation Class
     - Add plot_flag, downsampling, acceleration, max_time, drone_placed_pattern in .__init
-    - For drone_placed pattern, we provide
+    - For drone placed pattern, we provide
         - 0 --> Random position within the cage
         - 1 --> Distributed over one edge
         - 2 --> Distributed over all edges
