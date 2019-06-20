@@ -10,9 +10,9 @@
         - 2 --> Distributed over all edges
         - 3 --> Starting from one corner
         - 4 --> Starting from all corner
-- Now the script can run in terminal with refresh plot.
-    - command "python3 kostas.py"
-    - For arguments description, type "python kostas.py -h"
+- Now the script can run in terminal, refreshing plot each step.
+    - Enter command "python3 kostas.py"
+    - For arguments description, Enter "python kostas.py -h"
 
 
 ## Version 3 (18-June-2019)
