@@ -6,6 +6,7 @@ import pandas as pd
 import argparse
 import os.path
 
+
 class Simulation:
     class Environment:
         def __init__(self, background, corners, downsampling=1, acceleration=30, plot_flag=True, max_time=900):
@@ -614,7 +615,7 @@ class Simulation:
                                 vision=np.zeros(shape=(self.environment.X_pos.shape[0],
                                                        self.environment.X_pos.shape[1])),
                                 radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
-                                # angular_vision=60,  # Degrees of vision (<180)
+                                angular_vision=60,  # Degrees of vision (<180)
                                 std_drone=0.1,  # Standard deviation for the movement of the drone
                                 vision_on=True, corners=self.environment.corners))
         # drone 4
