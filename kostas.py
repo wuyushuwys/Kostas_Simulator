@@ -9,7 +9,7 @@ import os.path
 
 class Simulation:
     class Environment:
-        def __init__(self, background, corners, downsampling=1, acceleration=30, plot_flag=True, max_time=900):
+        def __init__(self, background, corners, downsampling=1, acceleration=30, plot_flag=True, info_flag=True, max_time=900):
             fig = np.array(plt.imread(background))
             self.background = cv2.resize(fig, (round(fig.shape[1] / downsampling), round(fig.shape[0] / downsampling)))
             self.corners = (corners / downsampling).astype(float)
@@ -21,6 +21,7 @@ class Simulation:
             self.downsampling = downsampling
             self.acceleration = acceleration
             self.plot_flag = plot_flag
+            self.info_flag = info_flag
             self.max_time = max_time
 
     # general_mission_parameters
@@ -414,7 +415,8 @@ class Simulation:
                 if near:
                     self.speed = 0
                     self.mode.actual = 'Arm'
-                    print("Drone {} landed and armed".format(self.index))
+                    if self.environment.info_flag:
+                        print("Drone {} landed and armed".format(self.index))
             elif self.mode.actual == 'GoToPerson':  # Send the drones to the position of the person detected
                 # Update the attributes of the drone based on the destination position.
                 # Indicate if the drone is near the destination
@@ -422,7 +424,8 @@ class Simulation:
                 if near:
                     self.speed = 0
                     self.mode.actual = 'Loiter'
-                    print("Drone {} is loitering".format(self.index))
+                    if self.environment.info_flag:
+                        print("Drone {} is loitering".format(self.index))
                     self.mode.parameters_destination = self.position
             elif self.mode.actual is 'Loiter':  # Keep the drone flying at its current position
                 near = self.goto(mission_parameters)
@@ -480,7 +483,8 @@ class Simulation:
             # do not transmit any information to the remaining drones
             if not self.drones[drone_idx].status_net:
                 self.drones[drone_idx].mode.actual = 'RTL'
-                print("Drone {} is returning to launch".format(drone_idx))
+                if self.environment.info_flag:
+                    print("Drone {} is returning to launch".format(drone_idx))
                 # Update the parameters of the mission. In this case, the destination position is the home position.
                 self.drones[drone_idx].mode.parameters_destination = self.drones[drone_idx].home
                 self.drones[drone_idx].vision_on = False  # Set the camera off when returning to launch
@@ -490,7 +494,8 @@ class Simulation:
                 for idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
                     if idx == drone_idx:  # The drone that detects the person updates its mission
                         self.drones[idx].mode.actual = 'RTL'
-                        print("Drone {} is returning to launch".format(idx))
+                        if self.environment.info_flag:
+                            print("Drone {} is returning to launch".format(idx))
                         # Update the parameters of the mission.
                         # In this case, the destination position is the home position.
                         self.drones[idx].mode.parameters_destination = self.drones[idx].home
@@ -500,14 +505,16 @@ class Simulation:
                             send_package = ((np.sign(np.random.rand(1) - self.drones[idx].p_package_lost) + 1) / 2)[0]
                             if send_package == 1:
                                 self.drones[idx].mode.actual = 'RTL'
-                                print("Drone {} is returning to launch".format(idx))
+                                if self.environment.info_flag:
+                                    print("Drone {} is returning to launch".format(idx))
                                 # Update the parameters of the mission. In this case, the
                                 # destination position is the home position.
                                 self.drones[idx].mode.parameters_destination = self.drones[idx].home
                                 self.drones[idx].vision_on = False
                             else:
-                                print("Package sent from drone {} to drone {} was lost"
-                                      .format(drone_idx, idx))
+                                if self.environment.info_flag:
+                                    print("Package sent from drone {} to drone {} was lost"
+                                        .format(drone_idx, idx))
         elif self.general_mission_parameters.name == 'GoToPerson':
             self.reward.total += self.reward.person_dectected
             # drone_out = deepcopy(drone_in)  # First, all the structure of the drone is copied
@@ -515,8 +522,9 @@ class Simulation:
             # do not transmit any information to the remaining drones
             if not self.drones[drone_idx].status_net:
                 self.drones[drone_idx].mode.actual = 'GoToPerson'
-                print("Drone {} is going to position of person detected"
-                      .format(drone_idx))
+                if self.environment.info_flag:
+                    print("Drone {} is going to position of person detected"
+                        .format(drone_idx))
                 self.drones[drone_idx].mode.parameters_destination = self.general_mission_parameters.position_people[0]
                 self.drones[drone_idx].vision_on = False  # Set the camera off when returning to launch
             else:
@@ -524,7 +532,8 @@ class Simulation:
                 for idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
                     if idx == drone_idx:
                         self.drones[idx].mode.actual = 'GoToPerson'
-                        print("Drone {} is going to position of person detected".format(idx))
+                        if self.environment.info_flag:
+                            print("Drone {} is going to position of person detected".format(idx))
                         self.drones[idx].mode.parameters_destination = \
                             self.general_mission_parameters.position_people[0]
                         self.drones[idx].vision_on = False  # Set the camera off when returning to launch
@@ -533,31 +542,35 @@ class Simulation:
                             send_package = ((np.sign(np.random.rand(1) - self.drones[idx].p_package_lost) + 1) / 2)[0]
                             if send_package == 1:
                                 self.drones[idx].mode.actual = 'GoToPerson'
-                                print("Drone {} is going to position of person detected"
-                                      .format(idx))
+                                if self.environment.info_flag:
+                                    print("Drone {} is going to position of person detected"
+                                        .format(idx))
                                 self.drones[idx].mode.parameters_destination = \
                                     self.general_mission_parameters.position_people[0]
                                 self.drones[idx].vision_on = False  # Set the camera off when returning to launch
                             else:
-                                print("Package sent frone drone {} to drone {} was lost"
-                                      .format(drone_idx, idx))
+                                if self.environment.info_flag:
+                                    print("Package sent frone drone {} to drone {} was lost"
+                                        .format(drone_idx, idx))
         elif self.general_mission_parameters.name == "Random_action":
             self.drones[drone_idx].mode.parameters_detection = 0
             for idx_ppl in range(len(self.general_mission_parameters.position_people)):
                 if self.general_mission_parameters.position_people[idx_ppl] not in \
                         self.general_mission_parameters.position_detected:
-                    print("One person was detected at position: ({},{}), for a total of {} people detected."
-                          .format(self.general_mission_parameters.position_people[idx_ppl][0],
-                                  self.general_mission_parameters.position_people[idx_ppl][1],
-                                  len(self.general_mission_parameters.position_detected)))
+                    if self.environment.info_flag:
+                        print("One person was detected at position: ({},{}), for a total of {} people detected."
+                              .format(self.general_mission_parameters.position_people[idx_ppl][0],
+                                      self.general_mission_parameters.position_people[idx_ppl][1],
+                                      len(self.general_mission_parameters.position_detected)))
                     self.general_mission_parameters.position_detected.\
                         append(self.general_mission_parameters.position_people[idx_ppl])
                     self.reward.total += self.reward.person_dectected
                     self.drones[drone_idx].mode.parameters_detection += 1
                     if len(self.general_mission_parameters.position_detected) == \
                             self.general_mission_parameters.num_people:
-                        print("All {} people have been detected. \nMission accomplished!".format(
-                            self.general_mission_parameters.num_people))
+                        if self.environment.info_flag:
+                            print("All {} people have been detected. \nMission accomplished!".format(
+                                self.general_mission_parameters.num_people))
                         self.general_mission_parameters.accomplished = True
         else:
             pass
@@ -660,7 +673,7 @@ class Simulation:
                                   corners=self.environment.corners, std_person=0))
         return person
 
-    def __init__(self, plot_flag=False, downsampling=6, acceleration=8, max_time=900, drone_placed_pattern=0):
+    def __init__(self, plot_flag=True, info_flag=True, downsampling=6, acceleration=8, max_time=900, drone_placed_pattern=0):
         """
         :param plot_flag:
         :param downsampling:
@@ -680,6 +693,7 @@ class Simulation:
                                             downsampling=downsampling,              # downsampling parameter
                                             acceleration=acceleration,              # acceleration parameter
                                             plot_flag=plot_flag,                    # plot flag
+                                            info_flag=info_flag,                    # Info flag
                                             max_time=max_time)                      # max running time
         self.general_mission_parameters = \
             self.GeneralMissionParameters(name="Random_action",
@@ -716,12 +730,14 @@ class Simulation:
             if not boundary_check:  # If it is not in the cage, status_net goes to 0 and gets stopped
                 if not self.drones[drone_idx].mode.actual == 'Off':
                     if len(self.data_per_step) == 0:
-                        print("Drone {} is out of the KRI cage!"
-                              .format(drone_idx))
+                        if self.environment.info_flag:
+                            print("Drone {} is out of the KRI cage!"
+                                .format(drone_idx))
                     else:
                         self.reward.total -= self.reward.cost_crash
-                        print("Drone {} crashed against the net"
-                              .format(drone_idx))
+                        if self.environment.info_flag:
+                            print("Drone {} crashed against the net"
+                                .format(drone_idx))
                     # If the drone is out of the range, disconnet from the net,
                     # stop it and turn of the camera
                     self.drones[drone_idx].status_net = False
@@ -800,8 +816,9 @@ class Simulation:
                 self.general_mission_parameters.position_people = position_people
                 num_ppl_detected = sum((np.sign(np.random.rand(1, detected_objects) -
                                                 self.drones[drone_idx].p_misdetection) + 1) / 2)[0]
-                print("Drone {} detected {} people out of {} objects detected"
-                      .format(drone_idx, int(num_ppl_detected), detected_objects))
+                if self.environment.info_flag:
+                    print("Drone {} detected {} people out of {} objects detected"
+                        .format(drone_idx, int(num_ppl_detected), detected_objects))
                 if num_ppl_detected > 0:
                     self.mission_update(drone_idx)
             self.data_per_step[-1].append((self.drones[drone_idx].index,
@@ -849,13 +866,13 @@ class Simulation:
         is_done = self.general_mission_parameters.accomplished
         return self.data_per_step[-1][0:-1], self.reward.total - old_total_reward, is_done
 
-
 if __name__ == "__main__":
     parse = argparse.ArgumentParser(description="Kostas Simulator",
                                     usage='use "%(prog)s --help" for more information',
                                     formatter_class=argparse.RawTextHelpFormatter)
     parse.add_argument('--max_time',type=int, default=900, help="max running time")
-    parse.add_argument('--plot_flag',type=bool, default=True, help="plotting flag")
+    parse.add_argument('--plot_flag',type=bool, default=False, help="plotting flag")
+    parse.add_argument('--info_flag', type=bool, default=False, help="info flag")
     parse.add_argument('--acceleration',type=int, default=30, help="acceleration value")
     parse.add_argument('--drone_placed_pattern',type=int, default=0,
                        help="""drone_placed_pattern:  ##\n\
@@ -877,6 +894,7 @@ if __name__ == "__main__":
     """
 
     simulation = Simulation(plot_flag=args.plot_flag,
+                            info_flag=args.info_flag,
                             max_time=args.max_time,
                             drone_placed_pattern=args.drone_placed_pattern)
     print("SIMULATION STARTS")
@@ -886,10 +904,12 @@ if __name__ == "__main__":
     for person_idx in range(min(simulation.general_mission_parameters.num_people, len(simulation.person))):
         print("({})".format(simulation.person[person_idx].position))
     print('Mission when locating a person: ' + simulation.general_mission_parameters.name)
-    fig, ax = plt.subplots()
-    fig.show()
+    if simulation.environment.plot_flag:
+        fig, ax = plt.subplots()
+        fig.show()
     while times < simulation.environment.max_time and not simulation.general_mission_parameters.accomplished:
-        ax.clear()
+        if simulation.environment.plot_flag:
+            ax.clear()
         time_start = time()
         """
         the ob(observations) is an list of tuple, which refer the observation of current time, in the format of
@@ -915,13 +935,14 @@ if __name__ == "__main__":
         times += 1
     if times >= simulation.environment.max_time:
         print("Drones run out of battery")
-        print("Total Reward is:{}\nSIMULATION ENDS in {} seconds".format(simulation.reward.total, round(time() - t, 2)))
-    if simulation.general_mission_parameters.accomplished:
-        print("The total reward is {}".format(simulation.reward.total))
+
+    print("Total Reward is: {}\nSIMULATION ENDS in {} seconds".format(simulation.reward.total, round(time() - t, 2)))
+    #if simulation.general_mission_parameters.accomplished:
+    #    print("The total reward is {}".format(simulation.reward.total))
 
     file = pd.DataFrame(simulation.data_per_step)
     file.to_csv('./all_data.csv', sep=',', index=False)
-    print('All data have been saved in all_data.csv\nEnd')
+    print('All data has been saved in all_data.csv\nEnd')
     # Keep the plot when simulation finished
     if simulation.environment.plot_flag:
         plt.show(block=True)
