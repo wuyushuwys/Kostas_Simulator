@@ -26,7 +26,7 @@ class Simulation:
 
     # general_mission_parameters
     class GeneralMissionParameters:
-        def __init__(self, name, drone_placed_pattern=0, action_id=None, isDebug=False,
+        def __init__(self, name, drone_placement_pattern=0, action_id=None, isDebug=False,
                      accomplished=False, distance_thres=0, position_detected=[],
                      position_people=np.array([]), speed=0.0, num_simple_actions=0, num_drones=0, num_people=0):
             """
@@ -41,7 +41,7 @@ class Simulation:
             """
 
             self.name = name  # Name of mission
-            self.drone_placed_pattern = drone_placed_pattern
+            self.drone_placement_pattern = drone_placement_pattern
             if name == "Random_action":
                 self.mission_actual = name  # Random Generation Flag
             else:
@@ -120,7 +120,7 @@ class Simulation:
             plot the person in the map
             """
             plt.plot(self.position[0], self.position[1],
-                     'wo', markersize=3, markeredgewidth=3, fillstyle='none')
+                     'bo', markersize=3, markeredgewidth=3, fillstyle='none')
 
         def plot_velocity(self):
             """
@@ -581,7 +581,7 @@ class Simulation:
         drone = list()
         # drone 0
         drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=0, status_net=True,
-                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
+                                placed_pattern=self.general_mission_parameters.drone_placement_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -594,7 +594,7 @@ class Simulation:
                                 vision_on=True, corners=self.environment.corners))
         # drone 1
         drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=1, status_net=True,
-                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
+                                placed_pattern=self.general_mission_parameters.drone_placement_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -607,7 +607,7 @@ class Simulation:
                                 vision_on=True, corners=self.environment.corners))
         # drone 2
         drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=2, status_net=True,
-                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
+                                placed_pattern=self.general_mission_parameters.drone_placement_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -620,7 +620,7 @@ class Simulation:
                                 vision_on=True, corners=self.environment.corners))
         # drone 3
         drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=3, status_net=True,
-                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
+                                placed_pattern=self.general_mission_parameters.drone_placement_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -633,7 +633,7 @@ class Simulation:
                                 vision_on=True, corners=self.environment.corners))
         # drone 4
         drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=4, status_net=True,
-                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
+                                placed_pattern=self.general_mission_parameters.drone_placement_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -646,7 +646,7 @@ class Simulation:
                                 vision_on=True, corners=self.environment.corners))
         # drone 5
         drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=5, status_net=True,
-                                placed_pattern=self.general_mission_parameters.drone_placed_pattern,
+                                placed_pattern=self.general_mission_parameters.drone_placement_pattern,
                                 mode=self.Drone.Mode(previous='FreeFly',
                                                      actual=self.general_mission_parameters.mission_actual,
                                                      parameters_destination=np.array([])),
@@ -673,13 +673,13 @@ class Simulation:
                                   corners=self.environment.corners, std_person=0))
         return person
 
-    def __init__(self, plot_flag=True, info_flag=True, downsampling=6, acceleration=8, max_time=900, drone_placed_pattern=0):
+    def __init__(self, plot_flag=True, info_flag=True, downsampling=6, acceleration=8, max_time=900, drone_placement_pattern=0):
         """
         :param plot_flag:
         :param downsampling:
         :param acceleration:
         :param max_time:
-        :param drone_placed_pattern:
+        :param drone_placement_pattern:
                 0 --> Random position within the cage
                 1 --> Distributed over one edge
                 2 --> Distributed over all edges
@@ -697,7 +697,7 @@ class Simulation:
                                             max_time=max_time)                      # max running time
         self.general_mission_parameters = \
             self.GeneralMissionParameters(name="Random_action",
-                                          drone_placed_pattern=drone_placed_pattern,
+                                          drone_placement_pattern=drone_placement_pattern,
                                           isDebug=True,
                                           accomplished=False,  # The mission has not been accomplished at the beginning
                                           distance_thres=5,
@@ -714,8 +714,9 @@ class Simulation:
     def step(self, action_id=None):
         old_total_reward = self.reward.total
         self.general_mission_parameters.action_id = action_id
-        plt.imshow(self.environment.background, origin='lower')
+
         if self.environment.plot_flag:
+            plt.imshow(self.environment.background, origin='lower')
             for i in range(4):
                 plt.plot([self.environment.corners[0][-1 + i], self.environment.corners[0][i]],
                          [self.environment.corners[1][-1 + i], self.environment.corners[1][i]],
@@ -871,21 +872,21 @@ if __name__ == "__main__":
                                     usage='use "%(prog)s --help" for more information',
                                     formatter_class=argparse.RawTextHelpFormatter)
     parse.add_argument('--max_time',type=int, default=900, help="max running time")
-    parse.add_argument('--plot_flag',type=bool, default=False, help="plotting flag")
-    parse.add_argument('--info_flag', type=bool, default=False, help="info flag")
+    parse.add_argument('--plot_flag',type=bool, default=True, help="plotting flag")
+    parse.add_argument('--info_flag', type=bool, default=True, help="info flag")
     parse.add_argument('--acceleration',type=int, default=30, help="acceleration value")
-    parse.add_argument('--drone_placed_pattern',type=int, default=0,
-                       help="""drone_placed_pattern:  ##\n\
+    parse.add_argument('--drone_placement_pattern',type=int, default=1,
+                       help="""drone_placement_pattern:  ##\n\
                        ##0 --> Random position within the cage\n\
                        ##1 --> Distributed over one edge\n\
                        ##2 --> Distributed over all edges\n\
                        ##3 --> Starting from one corner\n\
-                       ##4 --> Starting from all corner""")
+                       ##4 --> Starting from all corners""")
     args = parse.parse_args()
 
     # Simutation begin
     """
-    drone_placed_pattern:
+    drone_placement_pattern:
         0 --> Random position within the cage
         1 --> Distributed over one edge
         2 --> Distributed over all edges
@@ -896,7 +897,7 @@ if __name__ == "__main__":
     simulation = Simulation(plot_flag=args.plot_flag,
                             info_flag=args.info_flag,
                             max_time=args.max_time,
-                            drone_placed_pattern=args.drone_placed_pattern)
+                            drone_placement_pattern=args.drone_placement_pattern)
     print("SIMULATION STARTS")
     t = time()
     times = 1
