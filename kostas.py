@@ -59,8 +59,10 @@ class Simulation:
 
     # Cost and Reward of the mission
     class Reward:
+        # def __init__(self, total=0, person_dectected=900, cost_movement=1,
+        #              cost_camera_use=0.5, cost_communications=0.1, cost_crash=100):
         def __init__(self, total=0, person_dectected=900, cost_movement=1,
-                     cost_camera_use=0.5, cost_communications=0.1, cost_crash=100):
+                     cost_camera_use=0, cost_communications=0.1, cost_crash=1000):
             self.total = total
             self.person_dectected = person_dectected
             self.cost_movenent = cost_movement
@@ -726,12 +728,18 @@ class Simulation:
         self.person = self.generate_people()
         self.reward = self.Reward()
         self.data_per_step = list()
+        self.time_start = time()
+        self.time_step = 0
+
+        if plot_flag:
+            self.fig, self.ax = plt.subplots()
 
     def step(self, action_id=None):
         old_total_reward = self.reward.total
         self.general_mission_parameters.action_id = action_id
 
         if self.environment.plot_flag:
+            self.ax.clear()
             plt.imshow(self.environment.background, origin='lower')
             for i in range(4):
                 plt.plot([self.environment.corners[0][-1 + i], self.environment.corners[0][i]],
@@ -879,9 +887,25 @@ class Simulation:
         for person_idx in range(0, min(self.general_mission_parameters.num_people, len(self.person))):
             self.person[person_idx].random_walk()
 
-        # Check if mission is done
-        is_done = self.general_mission_parameters.accomplished
-        return self.data_per_step[-1][0:-1], self.reward.total - old_total_reward, is_done
+        # Check if mission is done or all the drones have crashed
+        all_drones_off = len([drone for drone in self.drones if drone.mode.actual == 'Off']) == len(self.drones)
+        is_done = self.general_mission_parameters.accomplished or all_drones_off or \
+                    self.time_step >= self.environment.max_time
+
+        reward = self.reward.total - old_total_reward
+        self.time_step += 1
+
+        if self.environment.plot_flag:
+            plt.title("Time step {}, Step Reward = {}".format(self.time_step, reward))
+            plt.xlabel("Total Reward {}".format(self.reward.total))
+            self.fig.canvas.draw()
+            plt.pause(0.01)
+            # plt.pause(max(1 / self.environment.acceleration - (time() - self.time_start), 0.1))
+
+            if is_done:
+                plt.close()
+
+        return self.data_per_step[-1][0:-1], reward, is_done
 
 if __name__ == "__main__":
     parse = argparse.ArgumentParser(description="Kostas Simulator",
@@ -918,18 +942,18 @@ if __name__ == "__main__":
                             drone_placement_pattern=args.drone_placement_pattern)
     print("SIMULATION STARTS")
     t = time()
-    times = 1
+    #times = 1
     print("Position of Targets")
     for person_idx in range(min(simulation.general_mission_parameters.num_people, len(simulation.person))):
         print("({})".format(simulation.person[person_idx].position))
     print('Mission when locating a person: ' + simulation.general_mission_parameters.name)
-    if simulation.environment.plot_flag:
-        fig, ax = plt.subplots()
-        fig.show()
-    while times < simulation.environment.max_time and not simulation.general_mission_parameters.accomplished:
-        if simulation.environment.plot_flag:
-            ax.clear()
-        time_start = time()
+    # if simulation.environment.plot_flag:
+    #     fig, ax = plt.subplots()
+    #     fig.show()
+    while simulation.time_step < simulation.environment.max_time and not simulation.general_mission_parameters.accomplished:
+        # if simulation.environment.plot_flag:
+        #     ax.clear()
+        # time_start = time()
         """
         the ob(observations) is an list of tuple, which refer the observation of current time, in the format of
          (
@@ -946,13 +970,13 @@ if __name__ == "__main__":
          the re(reward) is the step reward 
         """
         ob, re, done_flag = simulation.step(action_id=None)
-        if simulation.environment.plot_flag:
-            plt.title("Time stamp {}, Step Reward = {}".format(times, re))
-            plt.xlabel("Total Reward {}".format(simulation.reward.total))
-            fig.canvas.draw()
-            plt.pause(max(1 / simulation.environment.acceleration - (time() - time_start), 0.1))
-        times += 1
-    if times >= simulation.environment.max_time:
+        # if simulation.environment.plot_flag:
+        #     plt.title("Time stamp {}, Step Reward = {}".format(times, re))
+        #     plt.xlabel("Total Reward {}".format(simulation.reward.total))
+        #     fig.canvas.draw()
+        #     plt.pause(max(1 / simulation.environment.acceleration - (time() - time_start), 0.1))
+        #times += 1
+    if simulation.time_step >= simulation.environment.max_time:
         print("Drones run out of battery")
 
     print("Total Reward is: {}\nSIMULATION ENDS in {} seconds".format(simulation.reward.total, round(time() - t, 2)))
