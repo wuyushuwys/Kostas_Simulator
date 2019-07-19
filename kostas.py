@@ -61,7 +61,7 @@ class Simulation:
     class Reward:
         # def __init__(self, total=0, person_dectected=900, cost_movement=1,
         #              cost_camera_use=0.5, cost_communications=0.1, cost_crash=100):
-        def __init__(self, total=0, person_dectected=900, cost_movement=1,
+        def __init__(self, total=0, person_dectected=900, cost_movement=-1,
                      cost_camera_use=0, cost_communications=0.1, cost_crash=1000):
             self.total = total
             self.person_dectected = person_dectected
@@ -719,8 +719,9 @@ class Simulation:
                                           isDebug=True,
                                           accomplished=False,  # The mission has not been accomplished at the beginning
                                           distance_thres=5,
-                                          speed=(20/3)/self.environment.downsampling,  # Default speed for the drones,
+                                          #speed=(20/3)/self.environment.downsampling,  # Default speed for the drones,
                                           # equivalent to 1m/s
+                                          speed=(5/3)/self.environment.downsampling,
                                           num_simple_actions=6,  # Number of simple actions for the 'Random_action' mode
                                           num_people=3,
                                           num_drones=num_drones)
@@ -732,7 +733,20 @@ class Simulation:
         self.time_step = 0
 
         if plot_flag:
-            self.fig, self.ax = plt.subplots()
+            self.fig, self.ax = plt.subplots(figsize=(30, 15))
+
+    def get_initial_observations(self):
+        observations = []
+        for drone_idx in range(min(self.general_mission_parameters.num_drones, len(self.drones))):
+            observations.append((self.drones[drone_idx].index,
+                                 self.drones[drone_idx].mode.actual,
+                                 self.drones[drone_idx].status_net,
+                                 (self.drones[drone_idx].position[0], self.drones[drone_idx].position[1]),
+                                 np.mod(self.drones[drone_idx].direction, 360),
+                                 np.mod(self.drones[drone_idx].orientation, 360),
+                                 self.drones[drone_idx].speed,
+                                 []))
+        return observations
 
     def step(self, action_id=None):
         old_total_reward = self.reward.total
@@ -899,7 +913,7 @@ class Simulation:
             plt.title("Time step {}, Step Reward = {}".format(self.time_step, reward))
             plt.xlabel("Total Reward {}".format(self.reward.total))
             self.fig.canvas.draw()
-            plt.pause(0.01)
+            plt.pause(0.05)
             # plt.pause(max(1 / self.environment.acceleration - (time() - self.time_start), 0.1))
 
             if is_done:
