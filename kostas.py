@@ -59,10 +59,8 @@ class Simulation:
 
     # Cost and Reward of the mission
     class Reward:
-        # def __init__(self, total=0, person_dectected=900, cost_movement=1,
-        #              cost_camera_use=0.5, cost_communications=0.1, cost_crash=100):
-        def __init__(self, total=0, person_dectected=900, cost_movement=-1,
-                     cost_camera_use=0, cost_communications=0.1, cost_crash=1000):
+        def __init__(self, total=0, person_dectected=900, cost_movement=1,
+                     cost_camera_use=0.5, cost_communications=0.1, cost_crash=1000):
             self.total = total
             self.person_dectected = person_dectected
             self.cost_movenent = cost_movement
@@ -435,10 +433,14 @@ class Simulation:
 
             # Define the basic random actions: front, back, right, left, rotation +90, -90, 180
             elif self.mode.actual is 'Random_action':
-                if mission_parameters.isDebug:
-                    drone_action_id = np.random.randint(mission_parameters.num_simple_actions)
-                else:
-                    drone_action_id = mission_parameters.action_id[self.index]
+                #if mission_parameters.isDebug:
+                #    drone_action_id = np.random.randint(mission_parameters.num_simple_actions)
+                #else:
+                #    drone_action_id = mission_parameters.action_id[self.index]
+                drone_action_id = np.random.randint(mission_parameters.num_simple_actions)
+                self.simple_action(drone_action_id, mission_parameters)
+            elif self.mode.actual is 'FreeFly':
+                drone_action_id = mission_parameters.action_id[self.index]
                 self.simple_action(drone_action_id, mission_parameters)
             else:
                 pass
@@ -554,7 +556,7 @@ class Simulation:
                                 if self.environment.info_flag:
                                     print("Package sent frone drone {} to drone {} was lost"
                                         .format(drone_idx, idx))
-        elif self.general_mission_parameters.name == "Random_action":
+        elif self.general_mission_parameters.name == "Random_action" or self.general_mission_parameters.name == 'FreeFly':
             self.drones[drone_idx].mode.parameters_detection = 0
             for idx_ppl in range(len(self.general_mission_parameters.position_people)):
                 if self.general_mission_parameters.position_people[idx_ppl] not in \
@@ -714,9 +716,9 @@ class Simulation:
                                             info_flag=info_flag,                    # Info flag
                                             max_time=max_time)                      # max running time
         self.general_mission_parameters = \
-            self.GeneralMissionParameters(name="Random_action",
+            self.GeneralMissionParameters(name='FreeFly',
                                           drone_placement_pattern=drone_placement_pattern,
-                                          isDebug=True,
+                                          isDebug=False,
                                           accomplished=False,  # The mission has not been accomplished at the beginning
                                           distance_thres=5,
                                           #speed=(20/3)/self.environment.downsampling,  # Default speed for the drones,
