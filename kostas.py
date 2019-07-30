@@ -59,11 +59,13 @@ class Simulation:
 
     # Cost and Reward of the mission
     class Reward:
-        def __init__(self, total=0, person_dectected=900, cost_movement=1,
-                     cost_camera_use=0.5, cost_communications=0.1, cost_crash=1000):
+        def __init__(self, total=0, person_detected=900, cost_movement=0.1,
+                    cost_camera_use=0, cost_communications=0, cost_crash=100):
+        #def __init__(self, total=0, person_detected=900, cost_movement=1,
+        #             cost_camera_use=0.5, cost_communications=0.1, cost_crash=200):
             self.total = total
-            self.person_dectected = person_dectected
-            self.cost_movenent = cost_movement
+            self.person_detected = person_detected
+            self.cost_movement = cost_movement
             self.cost_camera_use = cost_camera_use
             self.cost_communications = cost_communications
             self.cost_crash = cost_crash
@@ -84,8 +86,10 @@ class Simulation:
             # generate in cage random position
             in_cage = 0
             while in_cage == 0:
+                #self.position = np.array([np.random.randint(min(self.corners[0]), max(self.corners[0])),
+                #                          np.random.randint(min(self.corners[0]), max(self.corners[1]))])
                 self.position = np.array([np.random.randint(min(self.corners[0]), max(self.corners[0])),
-                                          np.random.randint(min(self.corners[0]), max(self.corners[1]))])
+                                          np.random.randint(min(self.corners[0]) + 1/4 * max(self.corners[1]), max(self.corners[1]))])
                 in_cage = self.check_boundaries()
             self.orientation = orientation
             self.speed = speed
@@ -258,8 +262,10 @@ class Simulation:
                                           (aux - self.corners[0][3] - home_margin) + self.corners[1][3]])
                     self.orientation = 90
             elif placed_pattern == 3:  # Starting from one corner (left bottom)
-                self.home = np.array([self.corners[0][0] + home_margin,
-                                      self.corners[1][0] + 1.5 * home_margin])
+                # self.home = np.array([self.corners[0][0] + home_margin,
+                #                       self.corners[1][0] + 1.5 * home_margin])
+                self.home = np.array([self.corners[0][0] + 3 * home_margin,
+                                      self.corners[1][0] + 3 * home_margin])
                 self.orientation = 135
             elif placed_pattern == 4:  # Starting from all corners randomly
                 corner = np.random.randint(4)
@@ -495,6 +501,7 @@ class Simulation:
             else:
                 # If the drone is in the net, it transmits a package that reduces 1 point the reward
                 self.reward.total -= self.reward.cost_communications
+                self.drones[drone_idx].reward -= self.reward.cost_communications
                 for idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
                     if idx == drone_idx:  # The drone that detects the person updates its mission
                         self.drones[idx].mode.actual = 'RTL'
@@ -520,7 +527,9 @@ class Simulation:
                                     print("Package sent from drone {} to drone {} was lost"
                                         .format(drone_idx, idx))
         elif self.general_mission_parameters.name == 'GoToPerson':
-            self.reward.total += self.reward.person_dectected
+            self.reward.total += self.reward.person_detected
+            self.drones[drone_idx].reward += self.reward.person_detected
+
             # drone_out = deepcopy(drone_in)  # First, all the structure of the drone is copied
             # If the drone that detects the person is not on the net,
             # do not transmit any information to the remaining drones
@@ -533,6 +542,7 @@ class Simulation:
                 self.drones[drone_idx].vision_on = False  # Set the camera off when returning to launch
             else:
                 self.reward.total -= self.reward.cost_communications
+                self.drones[drone_idx].reward -= self.reward.cost_communications
                 for idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
                     if idx == drone_idx:
                         self.drones[idx].mode.actual = 'GoToPerson'
@@ -568,7 +578,8 @@ class Simulation:
                                       len(self.general_mission_parameters.position_detected)))
                     self.general_mission_parameters.position_detected.\
                         append(self.general_mission_parameters.position_people[idx_ppl])
-                    self.reward.total += self.reward.person_dectected
+                    self.reward.total += self.reward.person_detected
+                    self.drones[drone_idx].reward += self.reward.person_detected
                     self.drones[drone_idx].mode.parameters_detection += 1
                     if len(self.general_mission_parameters.position_detected) == \
                             self.general_mission_parameters.num_people:
@@ -721,9 +732,9 @@ class Simulation:
                                           isDebug=False,
                                           accomplished=False,  # The mission has not been accomplished at the beginning
                                           distance_thres=5,
-                                          #speed=(20/3)/self.environment.downsampling,  # Default speed for the drones,
+                                          speed=(20/3)/self.environment.downsampling,  # Default speed for the drones,
                                           # equivalent to 1m/s
-                                          speed=(5/3)/self.environment.downsampling,
+                                          #speed=(5/3)/self.environment.downsampling,
                                           num_simple_actions=6,  # Number of simple actions for the 'Random_action' mode
                                           num_people=3,
                                           num_drones=num_drones)
@@ -762,8 +773,9 @@ class Simulation:
                          [self.environment.corners[1][-1 + i], self.environment.corners[1][i]],
                          c='k', LineWidth=1)
 
-        # Plotting Drone properties
+        # Update drone properties
         for drone_idx in range(min(self.general_mission_parameters.num_drones, len(self.drones))):
+            self.drones[drone_idx].reward = 0  # Define an individual reward for each drone
             if self.environment.plot_flag:
                 self.drones[drone_idx].plot_drone_home()
             # Check if the drone is inside the cage
@@ -776,6 +788,7 @@ class Simulation:
                                 .format(drone_idx))
                     else:
                         self.reward.total -= self.reward.cost_crash
+                        self.drones[drone_idx].reward -= self.reward.cost_crash
                         if self.environment.info_flag:
                             print("Drone {} crashed against the net"
                                 .format(drone_idx))
@@ -839,6 +852,7 @@ class Simulation:
                     self.drones[drone_idx].plot_vision()
                 if sum(sum(self.drones[drone_idx].vision)) != 0:
                     self.reward.total -= self.reward.cost_camera_use
+                    self.drones[drone_idx].reward -= self.reward.cost_camera_use
 
         # Plotting people
         for person_idx in range(min(self.general_mission_parameters.num_people, len(self.person))):
@@ -894,7 +908,8 @@ class Simulation:
                         self.drones[drone_idx].position = self.drones[drone_idx].position + np.array(
                             [self.drones[drone_idx].speed * np.cos(np.deg2rad(self.drones[drone_idx].direction - 90)),
                              self.drones[drone_idx].speed * np.sin(np.deg2rad(self.drones[drone_idx].direction - 90))])
-                        self.reward.total -= self.reward.cost_movenent
+                        self.reward.total -= self.reward.cost_movement
+                        self.drones[drone_idx].reward -= self.reward.cost_movement
                     self.drones[drone_idx].speed = self.drones[drone_idx].speed + \
                                                    self.drones[drone_idx].std_drone * np.random.normal(0, 1)
             self.drones[drone_idx].mode.previous = self.drones[drone_idx].mode.actual
@@ -908,20 +923,24 @@ class Simulation:
         is_done = self.general_mission_parameters.accomplished or all_drones_off or \
                     self.time_step >= self.environment.max_time
 
-        reward = self.reward.total - old_total_reward
+        team_reward = self.reward.total - old_total_reward
         self.time_step += 1
 
         if self.environment.plot_flag:
-            plt.title("Time step {}, Step Reward = {}".format(self.time_step, reward))
+            plt.title("Time step {}, Step Reward = {}".format(self.time_step, team_reward))
             plt.xlabel("Total Reward {}".format(self.reward.total))
             self.fig.canvas.draw()
-            plt.pause(0.05)
+            if self.time_step == 1:
+                plt.pause(10.0)
+            else:
+                plt.pause(0.2)
             # plt.pause(max(1 / self.environment.acceleration - (time() - self.time_start), 0.1))
 
             if is_done:
                 plt.close()
 
-        return self.data_per_step[-1][0:-1], reward, is_done
+        rewards = [drone.reward for drone in self.drones]
+        return self.data_per_step[-1][0:-1], rewards, is_done
 
 if __name__ == "__main__":
     parse = argparse.ArgumentParser(description="Kostas Simulator",
