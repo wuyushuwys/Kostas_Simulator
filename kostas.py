@@ -704,7 +704,8 @@ class Simulation:
                                   corners=self.environment.corners, std_person=0))
         return person
 
-    def __init__(self, num_drones=6, plot_flag=True, info_flag=True, downsampling=6, acceleration=8, max_time=900, drone_placement_pattern=0):
+    def __init__(self, mission_name='FreeFly', num_drones=6, plot_flag=True, info_flag=True, downsampling=6, acceleration=8,
+                 max_time=900, drone_placement_pattern=0):
         """
         :param plot_flag:
         :param downsampling:
@@ -727,7 +728,7 @@ class Simulation:
                                             info_flag=info_flag,                    # Info flag
                                             max_time=max_time)                      # max running time
         self.general_mission_parameters = \
-            self.GeneralMissionParameters(name='FreeFly',
+            self.GeneralMissionParameters(name=mission_name,
                                           drone_placement_pattern=drone_placement_pattern,
                                           isDebug=False,
                                           accomplished=False,  # The mission has not been accomplished at the beginning
@@ -931,7 +932,7 @@ class Simulation:
             plt.xlabel("Total Reward {}".format(self.reward.total))
             self.fig.canvas.draw()
             if self.time_step == 1:
-                plt.pause(10.0)
+                plt.pause(5.0)
             else:
                 plt.pause(0.2)
             # plt.pause(max(1 / self.environment.acceleration - (time() - self.time_start), 0.1))
@@ -970,7 +971,8 @@ if __name__ == "__main__":
         4 --> Starting from all corner
     """
 
-    simulation = Simulation(num_drones=args.num_drones,
+    simulation = Simulation(mission_name='Random_action',
+                            num_drones=args.num_drones,
                             plot_flag=args.plot_flag,
                             info_flag=args.info_flag,
                             max_time=args.max_time,
