@@ -920,9 +920,7 @@ class Simulation:
             self.person[person_idx].random_walk()
 
         # Check if mission is done or all the drones have crashed
-        all_drones_off = len([drone for drone in self.drones if drone.mode.actual == 'Off']) == len(self.drones)
-        is_done = self.general_mission_parameters.accomplished or all_drones_off or \
-                    self.time_step >= self.environment.max_time
+        is_done = self.is_mission_done()
 
         team_reward = self.reward.total - old_total_reward
         self.time_step += 1
@@ -942,6 +940,55 @@ class Simulation:
 
         rewards = [drone.reward for drone in self.drones]
         return self.data_per_step[-1][0:-1], rewards, is_done
+
+    def is_mission_done(self):
+        all_drones_off = len([drone for drone in self.drones if drone.mode.actual == 'Off']) == len(self.drones)
+        is_done = self.general_mission_parameters.accomplished or all_drones_off or \
+                    self.time_step >= self.environment.max_time
+        return is_done
+
+    def render(self):
+        if not hasattr(self, 'fig'):
+            # Generate a new plot
+            self.fig = plt.figure(figsize=(30, 15))
+
+        # Draw the background
+        plt.clf()
+        plt.imshow(self.environment.background, origin='lower')
+        for i in range(4):
+            plt.plot([self.environment.corners[0][-1 + i], self.environment.corners[0][i]],
+                     [self.environment.corners[1][-1 + i], self.environment.corners[1][i]],
+                     c='k', LineWidth=1)
+
+        # Draw the people
+        for person_idx in range(len(self.person)):
+            self.person[person_idx].plot_person()
+            self.person[person_idx].plot_velocity()
+
+        # Draw the drones
+        for drone_idx in range(0, len(self.drones)):
+            self.drones[drone_idx].plot_drone_home()
+            boundary_check = self.drones[drone_idx].check_boundaries()
+            if not boundary_check:
+                plt.plot(self.drones[drone_idx].position[0], self.drones[drone_idx].position[1],
+                         'ks', markersize=6, fillstyle='none')
+            else:
+                # Color for the status of the drone
+                self.drones[drone_idx].plot_status()
+            self.drones[drone_idx].plot_velocity()
+            self.drones[drone_idx].plot_vision()
+
+        plt.title("Time step {}".format(self.time_step), fontsize=16)
+        plt.xlabel("Total Reward {:.3f}".format(self.reward.total), fontsize=16)
+
+        if self.time_step == 0:
+            plt.pause(5.0)
+        else:
+            plt.pause(0.001)
+
+        if self.is_mission_done():
+            plt.close()
+
 
 if __name__ == "__main__":
     parse = argparse.ArgumentParser(description="Kostas Simulator",
