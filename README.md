@@ -1,5 +1,9 @@
 # Kostas Simulator for Drone
 
+## Verison 5 (7-August-2019)
+- Reconstruction
+- Add distance as observation
+
 ## Version 4 (19-June-2019)
 - Add different drone placed pattern
 - Add Simulation Class

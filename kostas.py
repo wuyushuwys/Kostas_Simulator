@@ -742,7 +742,6 @@ class Simulation:
         self.drones = self.generate_drones()
         self.person = self.generate_people()
         self.reward = self.Reward()
-        self.data_per_step = list()
         self.time_start = time()
         self.time_step = 0
 
@@ -783,7 +782,7 @@ class Simulation:
             boundary_check = self.drones[drone_idx].check_boundaries()
             if not boundary_check:  # If it is not in the cage, status_net goes to 0 and gets stopped
                 if not self.drones[drone_idx].mode.actual == 'Off':
-                    if len(self.data_per_step) == 0:
+                    if self.time_step == 0:
                         if self.environment.info_flag:
                             print("Drone {} is out of the KRI cage!"
                                 .format(drone_idx))
@@ -865,7 +864,7 @@ class Simulation:
                 self.person[person_idx].plot_velocity()
 
         # Detection
-        self.data_per_step.append([])
+        observations = []
         for drone_idx in range(min(self.general_mission_parameters.num_drones, len(self.drones))):
             detected_objects, position_people = self.drones[drone_idx].detect_person(self.person)
             if detected_objects > 0:
@@ -877,7 +876,7 @@ class Simulation:
                         .format(drone_idx, int(num_ppl_detected), detected_objects))
                 if num_ppl_detected > 0:
                     self.mission_update(drone_idx)
-            self.data_per_step[-1].append((self.drones[drone_idx].index,
+            observations.append((self.drones[drone_idx].index,
                                            self.drones[drone_idx].mode.actual,
                                            self.drones[drone_idx].status_net,
                                            (self.drones[drone_idx].position[0], self.drones[drone_idx].position[1]),
@@ -885,7 +884,6 @@ class Simulation:
                                            np.mod(self.drones[drone_idx].orientation, 360),
                                            self.drones[drone_idx].speed,
                                            position_people))
-        self.data_per_step[-1].append(self.reward.total)
 
         # Action
         for drone_idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
@@ -925,21 +923,20 @@ class Simulation:
         team_reward = self.reward.total - old_total_reward
         self.time_step += 1
 
-        if self.environment.plot_flag:
+        if self.environment.plot_flag and not self.general_mission_parameters.accomplished:
             plt.title("Time step {}, Step Reward = {}".format(self.time_step, team_reward))
             plt.xlabel("Total Reward {}".format(self.reward.total))
             self.fig.canvas.draw()
             if self.time_step == 1:
                 plt.pause(5.0)
             else:
-                plt.pause(0.2)
-            # plt.pause(max(1 / self.environment.acceleration - (time() - self.time_start), 0.1))
+                plt.pause(0.01)
 
             if is_done:
                 plt.close()
 
         rewards = [drone.reward for drone in self.drones]
-        return self.data_per_step[-1][0:-1], rewards, is_done
+        return observations, rewards, is_done
 
     def is_mission_done(self):
         all_drones_off = len([drone for drone in self.drones if drone.mode.actual == 'Off']) == len(self.drones)
@@ -1060,16 +1057,13 @@ if __name__ == "__main__":
         #     fig.canvas.draw()
         #     plt.pause(max(1 / simulation.environment.acceleration - (time() - time_start), 0.1))
         #times += 1
+        if done_flag:
+            break
     if simulation.time_step >= simulation.environment.max_time:
         print("Drones run out of battery")
 
     print("Total Reward is: {}\nSIMULATION ENDS in {} seconds".format(simulation.reward.total, round(time() - t, 2)))
-    #if simulation.general_mission_parameters.accomplished:
-    #    print("The total reward is {}".format(simulation.reward.total))
 
-    file = pd.DataFrame(simulation.data_per_step)
-    file.to_csv('./all_data.csv', sep=',', index=False)
-    print('All data has been saved in all_data.csv\nEnd')
     # Keep the plot when simulation finished
     if simulation.environment.plot_flag:
         plt.show(block=True)
