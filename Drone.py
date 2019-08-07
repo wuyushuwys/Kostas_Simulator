@@ -306,7 +306,10 @@ class Drone:
             #    drone_action_id = np.random.randint(mission_parameters.num_simple_actions)
             # else:
             #    drone_action_id = mission_parameters.action_id[self.index]
-            drone_action_id = np.random.randint(mission_parameters.num_simple_actions)
+            if mission_parameters.action_id is None:
+                drone_action_id = np.random.randint(mission_parameters.num_simple_actions)
+            else:
+                drone_action_id = mission_parameters.action_id[self.index]
             self.simple_action(drone_action_id, mission_parameters)
         elif self.mode.actual is 'FreeFly':
             drone_action_id = mission_parameters.action_id[self.index]
