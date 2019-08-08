@@ -325,7 +325,7 @@ class Simulation:
                         .format(drone_idx, int(num_ppl_detected), detected_objects))
                 if num_ppl_detected > 0:
                     self.mission_update(drone_idx)
-            self.drones[drone_idx].get_distance(self.environment.downsampling)
+            self.drones[drone_idx].get_distance()
             # print("The distance between drone {} to the boundaries is {}".format(drone_idx,  self.drones[drone_idx].distance))
             observations.append((self.drones[drone_idx].index,
                                  self.drones[drone_idx].mode.actual,
@@ -488,6 +488,7 @@ if __name__ == "__main__":
          drone position(x, y), --> tuple 
          direction, 
          orientation, 
+         distance              --> An array of disrances [Bottom, Right, Top, Left ] in the smae scale as the dowmsampled image.
          position_people       --> list of tuple contains people that have been detected by the drone currently
          )
          The tuple above is stand for one drone's ob, thus we have 6(the number of drone) tuples to indicate the drone's

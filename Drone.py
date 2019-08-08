@@ -34,16 +34,17 @@ class Drone:
         speed: magnitude of speed (pixels/s) v_x = speed*cosd(orientation-90), v_y = speed*sind(orientation-90)
         vision:
         vision_on: Set the camera on at the beginning
+        distance: Array of disrances [Bottom, Right, Top, Left ]
         """
         self.index = index
         self.status_net = status_net
         self.mode = mode
         self.corners = corners
         # Slope of the boundaries
-        self.m1 = (self.corners[1][1] - self.corners[1][0]) / (self.corners[0][1] - self.corners[0][0])
-        self.m2 = (self.corners[1][1] - self.corners[1][2]) / (self.corners[0][1] - self.corners[0][2])
-        self.m3 = (self.corners[1][3] - self.corners[1][2]) / (self.corners[0][3] - self.corners[0][2])
-        self.m4 = (self.corners[1][3] - self.corners[1][0]) / (self.corners[0][3] - self.corners[0][0])
+        self.m1 = (self.corners[1][1] - self.corners[1][0]) / (self.corners[0][1] - self.corners[0][0])  # Bottom
+        self.m2 = (self.corners[1][1] - self.corners[1][2]) / (self.corners[0][1] - self.corners[0][2])  # Right
+        self.m3 = (self.corners[1][3] - self.corners[1][2]) / (self.corners[0][3] - self.corners[0][2])  # Top
+        self.m4 = (self.corners[1][3] - self.corners[1][0]) / (self.corners[0][3] - self.corners[0][0])  # Left
         self.k_array = [self.m1, self.m2, self.m3, self.m4]
         self.home_position(placed_pattern, dowmsampling)
         self.position = self.home
@@ -62,7 +63,7 @@ class Drone:
         self.p_package_lost = p_package_lost  # Probability of lossing a package of information among the drones
         self.p_camera_off = p_camera_off  # Probability of turning off the camera and not searching
         self.distance = np.array([])
-        self.get_distance(dowmsampling)
+        self.get_distance()
 
     def home_position(self, placed_pattern, downsampling):
         """
@@ -152,8 +153,8 @@ class Drone:
                                       self.corners[1][3] - home_margin])
                 self.orientation = 45
 
-    def get_distance(self, dowmsampling):
-        self.distance = [dowmsampling*abs(self.k_array[i]*(self.corners[0][i]-self.position[0])-(self.corners[1][i]-self.position[1]))
+    def get_distance(self):
+        self.distance = [abs(self.k_array[i]*(self.corners[0][i]-self.position[0])-(self.corners[1][i]-self.position[1]))
                          /np.sqrt(self.k_array[i]**2+1) for i in range(len(self.k_array))]
 
     def plot_drone_home(self):
