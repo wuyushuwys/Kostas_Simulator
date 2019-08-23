@@ -21,22 +21,25 @@ class Person:
         self.m4 = (self.corners[1][3] - self.corners[1][0]) / (self.corners[0][3] - self.corners[0][0])
         # generate in cage random position
         in_cage = 0
-        while in_cage == 0:
-            self.position = np.array([np.random.randint(min(self.corners[0]), max(self.corners[0])),
-                                      np.random.randint(min(self.corners[0]) + 1 / 4 * max(self.corners[1]),
-                                                        max(self.corners[1]))])
-            in_cage = self.check_boundaries()
+        if len(position)==0:
+            while in_cage == 0:
+                self.position = np.array([np.random.randint(min(self.corners[0]), max(self.corners[0])),
+                                          np.random.randint(min(self.corners[0]) + 1 / 4 * max(self.corners[1]),
+                                                            max(self.corners[1]))])
+                in_cage = self.check_boundaries()
+        else:
+            self.position = np.array(position)
         self.orientation = orientation
         self.speed = speed
         self.max_person_speed = max_person_speed
         self.std_person = std_person
-
+        self.detected = False
 
     def check_boundaries(self):
         """
         Checks if a drone is within the range of the cage of KRI
         """
-        # Control if is insade the cage. The equation is control=m(x-a)
+        # Control if is inside the cage. The equation is control=m(x-a)
         control1 = self.m1 * (self.position[0] - self.corners[0][0]) + self.corners[1][0]  # Y must be above the line
         control2 = self.m2 * (self.position[0] - self.corners[0][2]) + self.corners[1][2]  # Y must be below the line
         control3 = self.m3 * (self.position[0] - self.corners[0][2]) + self.corners[1][2]  # Y must be below the line
@@ -53,8 +56,12 @@ class Person:
         """
         plot the person in the map
         """
-        plt.plot(self.position[0], self.position[1],
-                 'bo', markersize=3, markeredgewidth=3, fillstyle='none')
+        if self.detected:
+            plt.plot(self.position[0], self.position[1],
+                     'ro', markersize=3, markeredgewidth=3, fillstyle='none')
+        else:
+            plt.plot(self.position[0], self.position[1],
+                     'bo', markersize=3, markeredgewidth=3, fillstyle='none')
 
     def plot_velocity(self):
         """
