@@ -103,13 +103,12 @@ class Simulation:
             for idx_ppl in range(len(self.general_mission_parameters.position_people)):
                 if self.general_mission_parameters.position_people[idx_ppl] not in \
                         self.general_mission_parameters.position_detected:
-                    if self.environment.info_flag:
-                        print("One person was detected at position: ({},{}), for a total of {} people detected."
-                              .format(self.general_mission_parameters.position_people[idx_ppl][0],
-                                      self.general_mission_parameters.position_people[idx_ppl][1],
-                                      len(self.general_mission_parameters.position_detected)))
                     self.general_mission_parameters.position_detected.\
                         append(self.general_mission_parameters.position_people[idx_ppl])
+                    if self.environment.info_flag:
+                        print("One person was detected at position: {}, for a total of {} people detected."
+                              .format(self.general_mission_parameters.position_people[idx_ppl][0],
+                                      len(self.general_mission_parameters.position_detected)))
                     self.reward.total += self.reward.person_detected
                     #self.drones[drone_idx].reward += self.reward.person_detected
                     self.drones[drone_idx].mode.parameters_detection += 1
@@ -126,35 +125,38 @@ class Simulation:
     def generate_drones(self):
         # Create the drone structures
         drones = [Drone(dowmsampling=self.environment.downsampling, index=i, status_net=True,
-                                placed_pattern=self.general_mission_parameters.drone_placement_pattern,
-                                mode=Drone.Mode(previous='FreeFly',
-                                                     actual=self.general_mission_parameters.mission_actual,
-                                                     parameters_destination=np.array([])),
-                                speed=self.general_mission_parameters.speed,
-                                vision=np.zeros(shape=(self.environment.X_pos.shape[0],
-                                                       self.environment.X_pos.shape[1])),
-                                radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
-                                angular_vision=60,  # Degrees of vision (<180)
-                                std_drone=0.1,  # Standard deviation for the movement of the drone
-                                vision_on=True, corners=self.environment.corners)
-
-            for i in range(self.general_mission_parameters.num_drones)
-        ]
+                        placed_pattern=self.general_mission_parameters.drone_placement_pattern,
+                        mode=Drone.Mode(previous='FreeFly',
+                                        actual=self.general_mission_parameters.mission_actual,
+                                        parameters_destination=np.array([])),
+                        speed=self.general_mission_parameters.speed,
+                        vision=np.zeros(shape=(self.environment.X_pos.shape[0],
+                                               self.environment.X_pos.shape[1])),
+                        radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
+                        angular_vision=60,  # Degrees of vision (<180)
+                        std_drone=0.1,  # Standard deviation for the movement of the drone
+                        vision_on=True, corners=self.environment.corners)
+                  for i in range(self.general_mission_parameters.num_drones)]
         return drones
 
-    def generate_people(self, max_person_speed=20/3):
+    def generate_people(self, max_person_speed=20/3, position=[]):
         """
          Create the target structures
+        :param position: generate certain position for each people
         :param max_person_speed: max speed of target
         :return: list of person
         """
-        person = [Person(orientation=0, speed=0, max_person_speed=max_person_speed,
-                         corners=self.environment.corners, std_person=0)
-
+        if len(position)==0:
+            people = [Person(index=i, orientation=0, speed=0, max_person_speed=max_person_speed,
+                             corners=self.environment.corners, std_person=0)
                   for i in range(self.general_mission_parameters.num_people)]
-        return person
+        else:
+            people = [Person(index=i, orientation=0, speed=0, max_person_speed=max_person_speed,
+                             corners=self.environment.corners, std_person=0, position = position[i])
+                  for i in range(self.general_mission_parameters.num_people)]
+        return people
 
-    def __init__(self, mission_name='FreeFly', num_drones=6, num_people=3,  plot_flag=False, info_flag=True,
+    def __init__(self, mission_name='FreeFly', num_drones=6, num_people=3, person_position=[], plot_flag=False, info_flag=True,
                  downsampling=6, max_time=900, drone_placement_pattern=0):
         """
         :param plot_flag:
@@ -188,7 +190,7 @@ class Simulation:
                                      num_people=num_people,
                                      num_drones=num_drones)
         self.drones = self.generate_drones()
-        self.person = self.generate_people()
+        self.person = self.generate_people(position=person_position)
         self.reward = Reward()
         self.time_start = time()
         self.time_step = 0
@@ -317,16 +319,21 @@ class Simulation:
         for drone_idx in range(min(self.general_mission_parameters.num_drones, len(self.drones))):
             detected_objects, position_people = self.drones[drone_idx].detect_person(self.person)
             if detected_objects > 0:
-                self.general_mission_parameters.position_people = position_people
-                num_ppl_detected = sum((np.sign(np.random.rand(1, detected_objects) -
-                                                self.drones[drone_idx].p_misdetection) + 1) / 2)[0]
+                detection_distribution = ((np.sign(np.random.rand(1, detected_objects) -
+                                                   self.drones[drone_idx].p_misdetection) + 1) / 2)[0]
+                num_ppl_detected = np.sum(detection_distribution)
+                true_detected_people = []
+                for i in range(len(detection_distribution)):
+                    if detection_distribution[i]==1:
+                        true_detected_people.append(position_people)
+                self.general_mission_parameters.position_people = true_detected_people
+                # self.general_mission_parameters.position_people = position_people[np.nonzero(detection_distribution)]
                 if self.environment.info_flag:
                     print("Drone {} detected {} people out of {} objects detected"
                         .format(drone_idx, int(num_ppl_detected), detected_objects))
                 if num_ppl_detected > 0:
                     self.mission_update(drone_idx)
             self.drones[drone_idx].get_distance()
-            # print("The distance between drone {} to the boundaries is {}".format(drone_idx,  self.drones[drone_idx].distance))
             observations.append((self.drones[drone_idx].index,
                                  self.drones[drone_idx].mode.actual,
                                  self.drones[drone_idx].status_net,
@@ -370,18 +377,21 @@ class Simulation:
         for person_idx in range(0, min(self.general_mission_parameters.num_people, len(self.person))):
             self.person[person_idx].random_walk()
 
-        # Check if mission is done or all the drones have crashed
+        # Check if mission is done or all theself.general_mission_parameters.position_people =  drones have crashed
         is_done = self.is_mission_done()
 
         team_reward = self.reward.total - old_total_reward
         self.time_step += 1
 
         if self.environment.plot_flag:
+            for detected_person in self.general_mission_parameters.position_detected:
+                plt.plot(detected_person[0][0], detected_person[0][1],
+                         'ro', markersize=3, markeredgewidth=3, fillstyle='none')
             plt.title("Time step {}, Step Reward = {}".format(self.time_step, team_reward))
             plt.xlabel("Total Reward {}".format(self.reward.total))
             self.fig.canvas.draw()
             if self.time_step == 1:
-                plt.pause(5.0)
+                plt.pause(0.1)
             else:
                 plt.pause(0.001)
             if is_done:
@@ -449,7 +459,7 @@ if __name__ == "__main__":
     parse.add_argument('--max_time', type=int, default=900, help="max running time")
     parse.add_argument('--plot_flag', type=str, default='True', help="plotting flag")
     parse.add_argument('--info_flag', type=str, default='True', help="info flag")
-    parse.add_argument('--drone_placement_pattern',type=int, default=1,
+    parse.add_argument('--drone_placement_pattern',type=int, default=0,
                        help="""drone_placement_pattern:  ##\n\
                        ##0 --> Random position within the cage\n\
                        ##1 --> Distributed over one edge\n\
@@ -480,6 +490,7 @@ if __name__ == "__main__":
     for person_idx in range(min(simulation.general_mission_parameters.num_people, len(simulation.person))):
         print("({})".format(simulation.person[person_idx].position))
     print('Mission when locating a person: ' + simulation.general_mission_parameters.name)
+
     while simulation.time_step < simulation.environment.max_time and not simulation.general_mission_parameters.accomplished:
         """
         the ob(observations) is an list of tuple, which refer the observation of current time, in the format of
@@ -497,7 +508,8 @@ if __name__ == "__main__":
          OB.
          the re(reward) is the step reward 
         """
-        ob, re, done_flag = simulation.step(action_id=None)
+
+        ob, re, done_flag = simulation.step()
         if done_flag:
             break
     if simulation.time_step >= simulation.environment.max_time:

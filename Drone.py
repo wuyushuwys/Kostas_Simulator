@@ -23,7 +23,7 @@ class Drone:
                  home=np.array([]), orientation=0,
                  speed=0.0, vision=np.array([]), vision_on=True, corners=np.array([]),
                  radius_vision=0.0, angular_vision=0.0, std_drone=0.0,
-                 p_disconnection=0.0, p_misdetection=0.1, p_package_lost=0.05, p_camera_off=0.0):
+                 p_disconnection=0.0, p_misdetection=0, p_package_lost=0.05, p_camera_off=0.0):
         """
         index: drone's index
         status_net: True --> active to the net, False --> not active to the net
@@ -46,7 +46,10 @@ class Drone:
         self.m3 = (self.corners[1][3] - self.corners[1][2]) / (self.corners[0][3] - self.corners[0][2])  # Top
         self.m4 = (self.corners[1][3] - self.corners[1][0]) / (self.corners[0][3] - self.corners[0][0])  # Left
         self.k_array = [self.m1, self.m2, self.m3, self.m4]
-        self.home_position(placed_pattern, dowmsampling)
+        if len(home)==0:
+            self.home_position(placed_pattern, dowmsampling)
+        else:
+            self.home = np.array(home)
         self.position = self.home
         self.direction = self.orientation
         self.speed = speed
@@ -242,23 +245,23 @@ class Drone:
                 line_range = [tmp[0][-1], tmp[0][0]]
                 plt.plot(line_range, [i, i], 'y', LineWidth=4, alpha=0.5)
 
-    def detect_person(self, person):
+    def detect_person(self, people):
         """
-        :param person: person class with people position
+        :param people: person class with people position
         :return:
             detected: number of objects have been detected
             pos_detected: the position of object has been detected
         """
         detected = 0
         pos_detected = []
-        for person_idx in range(0, len(person)):
+        for person in people:
             y_idx, x_idx = np.nonzero(self.vision)
-            if (round(person[person_idx].position[0]) in x_idx) and (
-                    round(person[person_idx].position[1]) in y_idx):
+            if (round(person.position[0]) in x_idx) and (round(person.position[1]) in y_idx)\
+                    and (person.detected is False):
                 detected += 1
-                pos_detected.append((person[person_idx].position[0],
-                                     person[person_idx].position[1]))
-
+                pos_detected.append((person.position[0],
+                                     person.position[1]))
+                # person.detected = True
         return detected, pos_detected
 
     def goto(self, general_mission_parameters):
