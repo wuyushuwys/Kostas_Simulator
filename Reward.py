@@ -1,6 +1,6 @@
 # Cost and Reward of the mission
 class Reward:
-    def __init__(self, total=0, person_detected=900, cost_movement=0.1,
+    def __init__(self, total=0, person_detected=900, cost_movement=0.5,
                  cost_camera_use=0, cost_communications=0, cost_crash=100):
         self.total = total
         self.person_detected = person_detected

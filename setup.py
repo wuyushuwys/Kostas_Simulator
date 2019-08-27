@@ -5,5 +5,5 @@ setup(
     version='0.1',
     packages=find_packages(),
     install_requires=['numpy', 'pandas', 'matplotlib', 'opencv-python'],
-    scripts=['kostas.py']
+    scripts=['simulator.py']
 )

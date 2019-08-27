@@ -32,7 +32,7 @@ class Simulation:
                 self.drones[drone_idx].vision_on = False  # Set the camera off when returning to launch
             else:
                 # If the drone is in the net, it transmits a package that reduces 1 point the reward
-                self.reward.total -= self.reward.cost_communications
+                #self.reward.total -= self.reward.cost_communications
                 self.drones[drone_idx].reward -= self.reward.cost_communications
                 for idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
                     if idx == drone_idx:  # The drone that detects the person updates its mission
@@ -60,7 +60,7 @@ class Simulation:
                                         .format(drone_idx, idx))
         elif self.general_mission_parameters.name == 'GoToPerson':
             self.reward.total += self.reward.person_detected
-            self.drones[drone_idx].reward += self.reward.person_detected
+            #self.drones[drone_idx].reward += self.reward.person_detected
 
             # drone_out = deepcopy(drone_in)  # First, all the structure of the drone is copied
             # If the drone that detects the person is not on the net,
@@ -73,7 +73,7 @@ class Simulation:
                 self.drones[drone_idx].mode.parameters_destination = self.general_mission_parameters.position_people[0]
                 self.drones[drone_idx].vision_on = False  # Set the camera off when returning to launch
             else:
-                self.reward.total -= self.reward.cost_communications
+                #self.reward.total -= self.reward.cost_communications
                 self.drones[drone_idx].reward -= self.reward.cost_communications
                 for idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
                     if idx == drone_idx:
@@ -111,7 +111,7 @@ class Simulation:
                     self.general_mission_parameters.position_detected.\
                         append(self.general_mission_parameters.position_people[idx_ppl])
                     self.reward.total += self.reward.person_detected
-                    self.drones[drone_idx].reward += self.reward.person_detected
+                    #self.drones[drone_idx].reward += self.reward.person_detected
                     self.drones[drone_idx].mode.parameters_detection += 1
                     if len(self.general_mission_parameters.position_detected) == \
                             self.general_mission_parameters.num_people:
@@ -236,7 +236,7 @@ class Simulation:
                             print("Drone {} is out of the KRI cage!"
                                 .format(drone_idx))
                     else:
-                        self.reward.total -= self.reward.cost_crash
+                        #self.reward.total -= self.reward.cost_crash
                         self.drones[drone_idx].reward -= self.reward.cost_crash
                         if self.environment.info_flag:
                             print("Drone {} crashed against the net"
@@ -300,7 +300,7 @@ class Simulation:
                 if self.environment.plot_flag:
                     self.drones[drone_idx].plot_vision()
                 if sum(sum(self.drones[drone_idx].vision)) != 0:
-                    self.reward.total -= self.reward.cost_camera_use
+                    #self.reward.total -= self.reward.cost_camera_use
                     self.drones[drone_idx].reward -= self.reward.cost_camera_use
 
         # Plotting people
@@ -360,7 +360,7 @@ class Simulation:
                         self.drones[drone_idx].position = self.drones[drone_idx].position + np.array(
                             [self.drones[drone_idx].speed * np.cos(np.deg2rad(self.drones[drone_idx].direction - 90)),
                              self.drones[drone_idx].speed * np.sin(np.deg2rad(self.drones[drone_idx].direction - 90))])
-                        self.reward.total -= self.reward.cost_movement
+                        #self.reward.total -= self.reward.cost_movement
                         self.drones[drone_idx].reward -= self.reward.cost_movement
                     self.drones[drone_idx].speed = self.drones[drone_idx].speed + \
                                                    self.drones[drone_idx].std_drone * np.random.normal(0, 1)
@@ -387,7 +387,9 @@ class Simulation:
             if is_done:
                 plt.close()
 
+        # Provide both individual rewards and the team reward
         rewards = [drone.reward for drone in self.drones]
+        rewards.append(team_reward)
         return observations, rewards, is_done
 
     def is_mission_done(self):
