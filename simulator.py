@@ -107,7 +107,7 @@ class Simulation:
                         append(self.general_mission_parameters.position_people[idx_ppl])
                     if self.environment.info_flag:
                         print("One person was detected at position: {}, for a total of {} people detected."
-                              .format(self.general_mission_parameters.position_people[idx_ppl][0],
+                              .format(self.general_mission_parameters.position_people[idx_ppl],
                                       len(self.general_mission_parameters.position_detected)))
                     self.reward.total += self.reward.person_detected
                     #self.drones[drone_idx].reward += self.reward.person_detected
@@ -325,7 +325,7 @@ class Simulation:
                 true_detected_people = []
                 for i in range(len(detection_distribution)):
                     if detection_distribution[i]==1:
-                        true_detected_people.append(position_people)
+                        true_detected_people.append(position_people[i])
                 self.general_mission_parameters.position_people = true_detected_people
                 # self.general_mission_parameters.position_people = position_people[np.nonzero(detection_distribution)]
                 if self.environment.info_flag:
@@ -342,7 +342,7 @@ class Simulation:
                                  np.mod(self.drones[drone_idx].orientation, 360),
                                  self.drones[drone_idx].speed,
                                  self.drones[drone_idx].distance,
-                                 position_people))
+                                 self.general_mission_parameters.position_people))
 
         # Action
         for drone_idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
@@ -385,7 +385,7 @@ class Simulation:
 
         if self.environment.plot_flag:
             for detected_person in self.general_mission_parameters.position_detected:
-                plt.plot(detected_person[0][0], detected_person[0][1],
+                plt.plot(detected_person[0], detected_person[1],
                          'ro', markersize=3, markeredgewidth=3, fillstyle='none')
             plt.title("Time step {}, Step Reward = {}".format(self.time_step, team_reward))
             plt.xlabel("Total Reward {}".format(self.reward.total))
@@ -459,7 +459,7 @@ if __name__ == "__main__":
     parse.add_argument('--max_time', type=int, default=900, help="max running time")
     parse.add_argument('--plot_flag', type=str, default='True', help="plotting flag")
     parse.add_argument('--info_flag', type=str, default='True', help="info flag")
-    parse.add_argument('--drone_placement_pattern',type=int, default=0,
+    parse.add_argument('--drone_placement_pattern',type=int, default=3,
                        help="""drone_placement_pattern:  ##\n\
                        ##0 --> Random position within the cage\n\
                        ##1 --> Distributed over one edge\n\
@@ -479,7 +479,7 @@ if __name__ == "__main__":
 
     simulation = Simulation(mission_name='Random_action',
                             num_drones=args.num_drones,
-                            num_people=3,
+                            num_people=6, person_position=[(20, 15),(21, 15),(22, 15),(23, 15),(24, 15),(25, 15),],
                             plot_flag=eval(args.plot_flag),
                             info_flag=eval(args.info_flag),
                             max_time=args.max_time,
