@@ -15,6 +15,9 @@ class GeneralMissionParameters:
             2 --> Distributed over all edges
             3 --> Starting from one corner
             4 --> Starting from all corner
+
+        position_people - people detected at the current time step
+        position_detected - people detected since the beginning of the episode
         """
 
         self.name = name  # Name of mission
