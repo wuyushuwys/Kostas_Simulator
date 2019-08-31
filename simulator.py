@@ -32,7 +32,7 @@ class Simulation:
                 self.drones[drone_idx].vision_on = False  # Set the camera off when returning to launch
             else:
                 # If the drone is in the net, it transmits a package that reduces 1 point the reward
-                #self.reward.total -= self.reward.cost_communications
+                self.reward.total -= self.reward.cost_communications
                 self.drones[drone_idx].reward -= self.reward.cost_communications
                 for idx in range(0, min(self.general_mission_parameters.num_drones, len(self.drones))):
                     if idx == drone_idx:  # The drone that detects the person updates its mission

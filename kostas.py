@@ -608,86 +608,6 @@ class Simulation:
 
             for i in range(self.general_mission_parameters.num_drones)
         ]
-
-        # drone = list()
-        # # drone 0
-        # drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=0, status_net=True,
-        #                         placed_pattern=self.general_mission_parameters.drone_placement_pattern,
-        #                         mode=self.Drone.Mode(previous='FreeFly',
-        #                                              actual=self.general_mission_parameters.mission_actual,
-        #                                              parameters_destination=np.array([])),
-        #                         speed=self.general_mission_parameters.speed,
-        #                         vision=np.zeros(shape=(self.environment.X_pos.shape[0],
-        #                                                self.environment.X_pos.shape[1])),
-        #                         radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
-        #                         angular_vision=60,  # Degrees of vision (<180)
-        #                         std_drone=0.1,  # Standard deviation for the movement of the drone
-        #                         vision_on=True, corners=self.environment.corners))
-        # # drone 1
-        # drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=1, status_net=True,
-        #                         placed_pattern=self.general_mission_parameters.drone_placement_pattern,
-        #                         mode=self.Drone.Mode(previous='FreeFly',
-        #                                              actual=self.general_mission_parameters.mission_actual,
-        #                                              parameters_destination=np.array([])),
-        #                         speed=self.general_mission_parameters.speed,
-        #                         vision=np.zeros(shape=(self.environment.X_pos.shape[0],
-        #                                                self.environment.X_pos.shape[1])),
-        #                         radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
-        #                         angular_vision=60,  # Degrees of vision (<180)
-        #                         std_drone=0.1,  # Standard deviation for the movement of the drone
-        #                         vision_on=True, corners=self.environment.corners))
-        # # drone 2
-        # drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=2, status_net=True,
-        #                         placed_pattern=self.general_mission_parameters.drone_placement_pattern,
-        #                         mode=self.Drone.Mode(previous='FreeFly',
-        #                                              actual=self.general_mission_parameters.mission_actual,
-        #                                              parameters_destination=np.array([])),
-        #                         speed=self.general_mission_parameters.speed,
-        #                         vision=np.zeros(shape=(self.environment.X_pos.shape[0],
-        #                                                self.environment.X_pos.shape[1])),
-        #                         radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
-        #                         angular_vision=60,  # Degrees of vision (<180)
-        #                         std_drone=0.1,  # Standard deviation for the movement of the drone
-        #                         vision_on=True, corners=self.environment.corners))
-        # # drone 3
-        # drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=3, status_net=True,
-        #                         placed_pattern=self.general_mission_parameters.drone_placement_pattern,
-        #                         mode=self.Drone.Mode(previous='FreeFly',
-        #                                              actual=self.general_mission_parameters.mission_actual,
-        #                                              parameters_destination=np.array([])),
-        #                         speed=self.general_mission_parameters.speed,
-        #                         vision=np.zeros(shape=(self.environment.X_pos.shape[0],
-        #                                                self.environment.X_pos.shape[1])),
-        #                         radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
-        #                         angular_vision=60,  # Degrees of vision (<180)
-        #                         std_drone=0.1,  # Standard deviation for the movement of the drone
-        #                         vision_on=True, corners=self.environment.corners))
-        # # drone 4
-        # drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=4, status_net=True,
-        #                         placed_pattern=self.general_mission_parameters.drone_placement_pattern,
-        #                         mode=self.Drone.Mode(previous='FreeFly',
-        #                                              actual=self.general_mission_parameters.mission_actual,
-        #                                              parameters_destination=np.array([])),
-        #                         speed=self.general_mission_parameters.speed,
-        #                         vision=np.zeros(shape=(self.environment.X_pos.shape[0],
-        #                                                self.environment.X_pos.shape[1])),
-        #                         radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
-        #                         angular_vision=60,  # Degrees of vision (<180)
-        #                         std_drone=0.1,  # Standard deviation for the movement of the drone
-        #                         vision_on=True, corners=self.environment.corners))
-        # # drone 5
-        # drone.append(self.Drone(dowmsampling=self.environment.downsampling, index=5, status_net=True,
-        #                         placed_pattern=self.general_mission_parameters.drone_placement_pattern,
-        #                         mode=self.Drone.Mode(previous='FreeFly',
-        #                                              actual=self.general_mission_parameters.mission_actual,
-        #                                              parameters_destination=np.array([])),
-        #                         speed=self.general_mission_parameters.speed,
-        #                         vision=np.zeros(shape=(self.environment.X_pos.shape[0],
-        #                                                self.environment.X_pos.shape[1])),
-        #                         radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
-        #                         angular_vision=60,  # Degrees of vision (<180)
-        #                         std_drone=0.1,  # Standard deviation for the movement of the drone
-        #                         vision_on=True, corners=self.environment.corners))
         return drones
 
     def generate_people(self, max_person_speed=20/3):
@@ -735,7 +655,6 @@ class Simulation:
                                           distance_thres=5,
                                           speed=(20/3)/self.environment.downsampling,  # Default speed for the drones,
                                           # equivalent to 1m/s
-                                          #speed=(5/3)/self.environment.downsampling,
                                           num_simple_actions=6,  # Number of simple actions for the 'Random_action' mode
                                           num_people=3,
                                           num_drones=num_drones)
