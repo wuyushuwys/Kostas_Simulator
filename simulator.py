@@ -59,8 +59,8 @@ class Simulation:
                                     print("Package sent from drone {} to drone {} was lost"
                                         .format(drone_idx, idx))
         elif self.general_mission_parameters.name == 'GoToPerson':
-            self.reward.total += self.reward.person_detected
-            self.drones[drone_idx].reward += self.reward.person_detected
+            # self.reward.total += self.reward.person_detected
+            # self.drones[drone_idx].reward += self.reward.person_detected
 
             # drone_out = deepcopy(drone_in)  # First, all the structure of the drone is copied
             # If the drone that detects the person is not on the net,
@@ -109,8 +109,8 @@ class Simulation:
                         print("One person was detected at position: {}, for a total of {} people detected."
                               .format(self.general_mission_parameters.position_people[idx_ppl],
                                       len(self.general_mission_parameters.position_detected)))
-                    self.reward.total += self.reward.person_detected
-                    self.drones[drone_idx].reward += self.reward.person_detected
+                    # self.reward.total += self.reward.person_detected
+                    # self.drones[drone_idx].reward += self.reward.person_detected
                     self.drones[drone_idx].mode.parameters_detection += 1
                     if len(self.general_mission_parameters.position_detected) == \
                             self.general_mission_parameters.num_people:
@@ -332,6 +332,11 @@ class Simulation:
                     print("Drone {} detected {} people out of {} objects detected"
                         .format(drone_idx, int(num_ppl_detected), detected_objects))
                 if num_ppl_detected > 0:
+                    for person in self.person:
+                        if tuple(person.position) in true_detected_people and person.detected is False:
+                            self.reward.total += self.reward.person_detected
+                            self.drones[drone_idx].reward += self.reward.person_detected
+                            person.detected = True
                     self.mission_update(drone_idx)
             self.drones[drone_idx].get_distance()
             observations.append((self.drones[drone_idx].index,
@@ -384,9 +389,10 @@ class Simulation:
         self.time_step += 1
 
         if self.environment.plot_flag:
-            for detected_person in self.general_mission_parameters.position_detected:
-                plt.plot(detected_person[0], detected_person[1],
-                         'ro', markersize=3, markeredgewidth=3, fillstyle='none')
+            for person in self.person:
+                if person.detected is True:
+                    plt.plot(person.position[0], person.position[1],
+                             'ro', markersize=3, markeredgewidth=3, fillstyle='none')
             plt.title("Time step {}, Step Reward = {}".format(self.time_step, team_reward))
             plt.xlabel("Total Reward {}".format(self.reward.total))
             self.fig.canvas.draw()
@@ -460,7 +466,7 @@ if __name__ == "__main__":
     parse.add_argument('--max_time', type=int, default=900, help="max running time")
     parse.add_argument('--plot_flag', type=str, default='True', help="plotting flag")
     parse.add_argument('--info_flag', type=str, default='True', help="info flag")
-    parse.add_argument('--drone_placement_pattern',type=int, default=3,
+    parse.add_argument('--drone_placement_pattern',type=int, default=0,
                        help="""drone_placement_pattern:  ##\n\
                        ##0 --> Random position within the cage\n\
                        ##1 --> Distributed over one edge\n\
@@ -480,7 +486,7 @@ if __name__ == "__main__":
 
     simulation = Simulation(mission_name='Random_action',
                             num_drones=args.num_drones,
-                            num_people=6, person_position=[(20, 15),(21, 15),(22, 15),(23, 15),(24, 15),(25, 15),],
+                            num_people=6,
                             plot_flag=eval(args.plot_flag),
                             info_flag=eval(args.info_flag),
                             max_time=args.max_time,

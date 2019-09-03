@@ -259,8 +259,7 @@ class Drone:
             if (round(person.position[0]) in x_idx) and (round(person.position[1]) in y_idx)\
                     and (person.detected is False):
                 detected += 1
-                pos_detected.append((person.position[0],
-                                     person.position[1]))
+                pos_detected.append(tuple(person.position))
                 # person.detected = True
         return detected, pos_detected
 
