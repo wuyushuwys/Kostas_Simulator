@@ -134,7 +134,9 @@ class Simulation:
                                                self.environment.X_pos.shape[1])),
                         radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
                         angular_vision=60,  # Degrees of vision (<180)
-                        std_drone=0.1,  # Standard deviation for the movement of the drone
+                        std_drone_speed=0.1,  # Standard deviation for the speed of the drone
+                        std_drone_orientation=0.1,  # Standard deviation for the orientation of the drone
+                        std_drone_direction=0.1,  # Standard deviation for the direction of the drone
                         vision_on=True, corners=self.environment.corners)
                   for i in range(self.general_mission_parameters.num_drones)]
         return drones
@@ -363,9 +365,9 @@ class Simulation:
                 if not ((self.drones[drone_idx].mode.actual == 'Disarm') or (
                         self.drones[drone_idx].mode.actual == 'Arm')):  # If the drone is flying
                     # Same orientation plus a random from N(0,1)
-                    self.drones[drone_idx].orientation += self.drones[drone_idx].std_drone * np.random.normal()
+                    self.drones[drone_idx].orientation += self.drones[drone_idx].std_drone_orientation * np.random.normal()
                     # Same direction plus a random from N(0,1)
-                    self.drones[drone_idx].direction += self.drones[drone_idx].std_drone * np.random.normal()
+                    self.drones[drone_idx].direction += self.drones[drone_idx].std_drone_direction * np.random.normal()
                     # If the drone changed the flying mode, do not move while planning the new mode
                     if self.drones[drone_idx].mode.previous == self.drones[drone_idx].mode.actual:
                         # New position = previous position + speed/s x 1s
@@ -375,7 +377,7 @@ class Simulation:
                         self.reward.total -= self.reward.cost_movement
                         self.drones[drone_idx].reward -= self.reward.cost_movement
                     self.drones[drone_idx].speed = self.drones[drone_idx].speed + \
-                                                   self.drones[drone_idx].std_drone * np.random.normal(0, 1)
+                                                   self.drones[drone_idx].std_drone_speed * np.random.normal(0, 1)
             self.drones[drone_idx].mode.previous = self.drones[drone_idx].mode.actual
 
         # People updates with random variables

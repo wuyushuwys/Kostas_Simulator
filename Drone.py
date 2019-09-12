@@ -22,7 +22,8 @@ class Drone:
     def __init__(self, placed_pattern=0, dowmsampling=6, index=0, status_net=True, mode=Mode(),
                  home=np.array([]), orientation=0,
                  speed=0.0, vision=np.array([]), vision_on=True, corners=np.array([]),
-                 radius_vision=0.0, angular_vision=0.0, std_drone=0.0,
+                 radius_vision=0.0, angular_vision=0.0,
+                 std_drone_speed=0.0, std_drone_direction=0.0, std_drone_orientation=0.0,
                  p_disconnection=0.0, p_misdetection=0, p_package_lost=0.05, p_camera_off=0.0):
         """
         index: drone's index
@@ -58,7 +59,10 @@ class Drone:
 
         self.radius_vision = radius_vision  # Radius for vision (pixels)
         self.angular_vision = angular_vision  # Degrees of vision (<180)
-        self.std_drone = std_drone  # Standard deviation for the movement of the drone
+        # self.std_drone = std_drone  # Standard deviation for the movement of the drone
+        self.std_drone_speed = std_drone_speed  # Standard deviation for the speed of the drone
+        self.std_drone_direction = std_drone_direction  # Standard deviation for the direction of the drone
+        self.std_drone_orientation = std_drone_orientation  # Standard deviation for the orientation of the drone
 
         # Probability parameters
         self.p_disconnection = p_disconnection  # Probability the drone disconnects the net
