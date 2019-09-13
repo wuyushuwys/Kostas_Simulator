@@ -237,7 +237,7 @@ class Drone:
         plt.quiver(self.position[0], self.position[1],
                    self.speed * np.cos(np.deg2rad(self.direction - 90)),
                    self.speed * np.sin(np.deg2rad(self.direction - 90)),
-                   color='b', units='dots', scale=0.5, width=3)
+                   color='b', units='dots', scale=1, width=3, headaxislength=3)
 
     def plot_vision(self, dense=1):
         """
