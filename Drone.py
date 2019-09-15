@@ -23,7 +23,7 @@ class Drone:
                  home=np.array([]), orientation=0,
                  speed=0.0, vision=np.array([]), vision_on=True, corners=np.array([]),
                  radius_vision=0.0, angular_vision=0.0, std_drone=0.0,
-                 p_disconnection=0.0, p_misdetection=0, p_package_lost=0.05, p_camera_off=0.0):
+                 p_disconnection=0.0, p_misdetection=0.05, p_package_lost=0.05, p_camera_off=0.0):
         """
         index: drone's index
         status_net: True --> active to the net, False --> not active to the net
