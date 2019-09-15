@@ -134,7 +134,9 @@ class Simulation:
                                                self.environment.X_pos.shape[1])),
                         radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
                         angular_vision=60,  # Degrees of vision (<180)
-                        std_drone=0.1,  # Standard deviation for the movement of the drone
+                        std_drone_speed=2/self.environment.downsampling,  # Standard deviation for the speed of the drone
+                        std_drone_orientation=0/self.environment.downsampling,  # Standard deviation for the orientation of the drone
+                        std_drone_direction=0/self.environment.downsampling,  # Standard deviation for the direction of the drone
                         vision_on=True, corners=self.environment.corners)
                   for i in range(self.general_mission_parameters.num_drones)]
         return drones
@@ -257,9 +259,9 @@ class Simulation:
                 # Color for the status of the drone
                 self.drones[drone_idx].plot_status()
 
-            # Speed
-            if self.environment.plot_flag:
-                self.drones[drone_idx].plot_velocity()
+            # # Speed
+            # if self.environment.plot_flag:
+            #     self.drones[drone_idx].plot_velocity()
 
             # Angular vision
             self.drones[drone_idx].vision = np.zeros(shape=(self.environment.X_pos.shape[0],
@@ -304,6 +306,10 @@ class Simulation:
                 if sum(sum(self.drones[drone_idx].vision)) != 0:
                     self.reward.total -= self.reward.cost_camera_use
                     self.drones[drone_idx].reward -= self.reward.cost_camera_use
+
+            # Speed
+            if self.environment.plot_flag:
+                self.drones[drone_idx].plot_velocity()
 
         # Plotting people
         for person_idx in range(min(self.general_mission_parameters.num_people, len(self.person))):
@@ -363,10 +369,12 @@ class Simulation:
                 if not ((self.drones[drone_idx].mode.actual == 'Disarm') or (
                         self.drones[drone_idx].mode.actual == 'Arm')):  # If the drone is flying
                     # Same orientation plus a random from N(0,1)
-                    self.drones[drone_idx].orientation += self.drones[drone_idx].std_drone * np.random.normal()
+                    self.drones[drone_idx].orientation += self.drones[drone_idx].std_drone_orientation * np.random.normal()
                     # Same direction plus a random from N(0,1)
-                    self.drones[drone_idx].direction += self.drones[drone_idx].std_drone * np.random.normal()
+                    self.drones[drone_idx].direction += self.drones[drone_idx].std_drone_direction * np.random.normal()
                     # If the drone changed the flying mode, do not move while planning the new mode
+                    self.drones[drone_idx].speed = self.drones[drone_idx].speed + \
+                                                   self.drones[drone_idx].std_drone_speed * np.random.normal(0, 1)
                     if self.drones[drone_idx].mode.previous == self.drones[drone_idx].mode.actual:
                         # New position = previous position + speed/s x 1s
                         self.drones[drone_idx].position = self.drones[drone_idx].position + np.array(
@@ -374,15 +382,15 @@ class Simulation:
                              self.drones[drone_idx].speed * np.sin(np.deg2rad(self.drones[drone_idx].direction - 90))])
                         self.reward.total -= self.reward.cost_movement
                         self.drones[drone_idx].reward -= self.reward.cost_movement
-                    self.drones[drone_idx].speed = self.drones[drone_idx].speed + \
-                                                   self.drones[drone_idx].std_drone * np.random.normal(0, 1)
+                    # self.drones[drone_idx].speed = self.drones[drone_idx].speed + \
+                    #                                self.drones[drone_idx].std_drone_speed * np.random.normal(0, 1)
             self.drones[drone_idx].mode.previous = self.drones[drone_idx].mode.actual
 
         # People updates with random variables
         for person_idx in range(0, min(self.general_mission_parameters.num_people, len(self.person))):
             self.person[person_idx].random_walk()
 
-        # Check if mission is done or all theself.general_mission_parameters.position_people =  drones have crashed
+        # Check if mission is done or all the self.general_mission_parameters.position_people =  drones have crashed
         is_done = self.is_mission_done()
 
         team_reward = self.reward.total - old_total_reward
@@ -443,8 +451,9 @@ class Simulation:
             else:
                 # Color for the status of the drone
                 self.drones[drone_idx].plot_status()
-            self.drones[drone_idx].plot_velocity()
             self.drones[drone_idx].plot_vision()
+            self.drones[drone_idx].plot_velocity()
+
 
         plt.title("Time step {}".format(self.time_step), fontsize=16)
         plt.xlabel("Total Reward {:.3f}".format(self.reward.total), fontsize=16)
@@ -466,7 +475,7 @@ if __name__ == "__main__":
     parse.add_argument('--max_time', type=int, default=900, help="max running time")
     parse.add_argument('--plot_flag', type=str, default='True', help="plotting flag")
     parse.add_argument('--info_flag', type=str, default='True', help="info flag")
-    parse.add_argument('--drone_placement_pattern',type=int, default=0,
+    parse.add_argument('--drone_placement_pattern',type=int, default=3,
                        help="""drone_placement_pattern:  ##\n\
                        ##0 --> Random position within the cage\n\
                        ##1 --> Distributed over one edge\n\
@@ -486,7 +495,7 @@ if __name__ == "__main__":
 
     simulation = Simulation(mission_name='Random_action',
                             num_drones=args.num_drones,
-                            num_people=6,
+                            num_people=3,  person_position=[(15, 20), (20, 25), (20, 20)],
                             plot_flag=eval(args.plot_flag),
                             info_flag=eval(args.info_flag),
                             max_time=args.max_time,
