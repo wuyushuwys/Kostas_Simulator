@@ -134,9 +134,12 @@ class Simulation:
                                                self.environment.X_pos.shape[1])),
                         radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
                         angular_vision=60,  # Degrees of vision (<180)
-                        std_drone_speed=2/self.environment.downsampling,  # Standard deviation for the speed of the drone
-                        std_drone_orientation=0/self.environment.downsampling,  # Standard deviation for the orientation of the drone
-                        std_drone_direction=0/self.environment.downsampling,  # Standard deviation for the direction of the drone
+                        #std_drone_speed=2/self.environment.downsampling,  # Standard deviation for the speed of the drone
+                        #std_drone_orientation=0/self.environment.downsampling,  # Standard deviation for the orientation of the drone
+                        #std_drone_direction=0/self.environment.downsampling,  # Standard deviation for the direction of the drone
+                        std_drone_speed=0.1,
+                        std_drone_orientation=0.1,
+                        std_drone_direction=0.1,
                         vision_on=True, corners=self.environment.corners)
                   for i in range(self.general_mission_parameters.num_drones)]
         return drones
