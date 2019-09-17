@@ -408,7 +408,7 @@ class Simulation:
             plt.xlabel("Total Reward {}".format(self.reward.total))
             self.fig.canvas.draw()
             if self.time_step == 1:
-                plt.pause(0.1)
+                plt.pause(1.0)
             else:
                 plt.pause(0.001)
             if is_done:
@@ -429,7 +429,7 @@ class Simulation:
     def render(self):
         if not hasattr(self, 'fig'):
             # Generate a new plot
-            self.fig = plt.figure(figsize=(30, 15))
+            self.fig = plt.figure(figsize=(15, 15))
 
         # Draw the background
         plt.clf()
