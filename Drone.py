@@ -21,7 +21,7 @@ class Drone:
 
     def __init__(self, placed_pattern=0, dowmsampling=6, index=0, status_net=True, mode=Mode(),
                  home=np.array([]), orientation=0,
-                 speed=0.0, vision=np.array([]), vision_on=True, corners=np.array([]),               
+                 speed=0.0, vision=np.array([]), vision_on=True, corners=np.array([]),
                  radius_vision=0.0, angular_vision=0.0,
                  std_drone_speed=0.0, std_drone_direction=0.0, std_drone_orientation=0.0,
                  p_disconnection=0.0, p_misdetection=0.05, p_package_lost=0.05, p_camera_off=0.0):
@@ -35,7 +35,7 @@ class Drone:
         speed: magnitude of speed (pixels/s) v_x = speed*cosd(orientation-90), v_y = speed*sind(orientation-90)
         vision:
         vision_on: Set the camera on at the beginning
-        distance: Array of disrances [Bottom, Right, Top, Left ]
+        distance: Array of distances [Bottom, Right, Top, Left ]
         """
         self.index = index
         self.status_net = status_net
@@ -47,12 +47,13 @@ class Drone:
         self.m3 = (self.corners[1][3] - self.corners[1][2]) / (self.corners[0][3] - self.corners[0][2])  # Top
         self.m4 = (self.corners[1][3] - self.corners[1][0]) / (self.corners[0][3] - self.corners[0][0])  # Left
         self.k_array = [self.m1, self.m2, self.m3, self.m4]
-        if len(home)==0:
+        if len(home) == 0:
             self.home_position(placed_pattern, dowmsampling)
         else:
             self.home = np.array(home)
         self.position = self.home
-        self.direction = self.orientation
+        self.direction = orientation
+        self.orientation = orientation
         self.speed = speed
         self.vision = np.array(vision)
         self.vision_on = vision_on
@@ -71,6 +72,9 @@ class Drone:
         self.p_camera_off = p_camera_off  # Probability of turning off the camera and not searching
         self.distance = np.array([])
         self.get_distance()
+
+        # General parameters
+        self.downsampling = dowmsampling
 
     def home_position(self, placed_pattern, downsampling):
         """
@@ -97,7 +101,7 @@ class Drone:
                   self.corners[0][0] + home_margin
             self.home = np.array([aux,
                                   (self.corners[1][1] - self.corners[1][0]) / (
-                                              self.corners[0][1] - self.corners[0][0]) *
+                                          self.corners[0][1] - self.corners[0][0]) *
                                   (aux - self.corners[0][0]) + self.corners[1][0] + home_margin])
             self.orientation = 180
         elif placed_pattern == 2:  # Distributed over all edges randomly
@@ -161,8 +165,9 @@ class Drone:
                 self.orientation = 45
 
     def get_distance(self):
-        self.distance = [abs(self.k_array[i]*(self.corners[0][i]-self.position[0])-(self.corners[1][i]-self.position[1]))
-                         /np.sqrt(self.k_array[i]**2+1) for i in range(len(self.k_array))]
+        self.distance = [
+            abs(self.k_array[i] * (self.corners[0][i] - self.position[0]) - (self.corners[1][i] - self.position[1]))
+            / np.sqrt(self.k_array[i] ** 2 + 1) for i in range(len(self.k_array))]
 
     def plot_drone_home(self):
         """
@@ -182,7 +187,7 @@ class Drone:
         else:
             pos = [self.home[0], self.home[1]]
 
-        # Control if is insade the cage. The equation is control=m(x-a)
+        # Control if is inside the cage. The equation is control=m(x-a)
         control1 = self.m1 * (pos[0] - self.corners[0][0]) + self.corners[1][0]  # Y must be above the line
         control2 = self.m2 * (pos[0] - self.corners[0][2]) + self.corners[1][2]  # Y must be below the line
         control3 = self.m3 * (pos[0] - self.corners[0][2]) + self.corners[1][2]  # Y must be below the line
@@ -260,7 +265,7 @@ class Drone:
         pos_detected = []
         for person in people:
             y_idx, x_idx = np.nonzero(self.vision)
-            if (round(person.position[0]) in x_idx) and (round(person.position[1]) in y_idx)\
+            if (round(person.position[0]) in x_idx) and (round(person.position[1]) in y_idx) \
                     and (person.detected is False):
                 detected += 1
                 pos_detected.append(tuple(person.position))
@@ -313,10 +318,14 @@ class Drone:
             #    drone_action_id = np.random.randint(mission_parameters.num_simple_actions)
             # else:
             #    drone_action_id = mission_parameters.action_id[self.index]
-            if mission_parameters.action_id is None:
-                drone_action_id = np.random.randint(mission_parameters.num_simple_actions)
+            if np.min(self.distance) < 6 / self.downsampling:
+                idx = np.argmin(self.distance)
+                drone_action_id = idx + (-1) ** idx
             else:
-                drone_action_id = mission_parameters.action_id[self.index]
+                if mission_parameters.action_id is None:
+                    drone_action_id = np.random.randint(mission_parameters.num_simple_actions)
+                else:
+                    drone_action_id = mission_parameters.action_id[self.index]
             self.simple_action(drone_action_id, mission_parameters)
         elif self.mode.actual is 'FreeFly':
             drone_action_id = mission_parameters.action_id[self.index]

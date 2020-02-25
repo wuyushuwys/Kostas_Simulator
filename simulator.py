@@ -57,7 +57,7 @@ class Simulation:
                             else:
                                 if self.environment.info_flag:
                                     print("Package sent from drone {} to drone {} was lost"
-                                        .format(drone_idx, idx))
+                                          .format(drone_idx, idx))
         elif self.general_mission_parameters.name == 'GoToPerson':
             # self.reward.total += self.reward.person_detected
             # self.drones[drone_idx].reward += self.reward.person_detected
@@ -69,7 +69,7 @@ class Simulation:
                 self.drones[drone_idx].mode.actual = 'GoToPerson'
                 if self.environment.info_flag:
                     print("Drone {} is going to position of person detected"
-                        .format(drone_idx))
+                          .format(drone_idx))
                 self.drones[drone_idx].mode.parameters_destination = self.general_mission_parameters.position_people[0]
                 self.drones[drone_idx].vision_on = False  # Set the camera off when returning to launch
             else:
@@ -90,20 +90,20 @@ class Simulation:
                                 self.drones[idx].mode.actual = 'GoToPerson'
                                 if self.environment.info_flag:
                                     print("Drone {} is going to position of person detected"
-                                        .format(idx))
+                                          .format(idx))
                                 self.drones[idx].mode.parameters_destination = \
                                     self.general_mission_parameters.position_people[0]
                                 self.drones[idx].vision_on = False  # Set the camera off when returning to launch
                             else:
                                 if self.environment.info_flag:
                                     print("Package sent frone drone {} to drone {} was lost"
-                                        .format(drone_idx, idx))
+                                          .format(drone_idx, idx))
         elif self.general_mission_parameters.name == "Random_action" or self.general_mission_parameters.name == 'FreeFly':
             self.drones[drone_idx].mode.parameters_detection = 0
             for idx_ppl in range(len(self.general_mission_parameters.position_people)):
                 if self.general_mission_parameters.position_people[idx_ppl] not in \
                         self.general_mission_parameters.position_detected:
-                    self.general_mission_parameters.position_detected.\
+                    self.general_mission_parameters.position_detected. \
                         append(self.general_mission_parameters.position_people[idx_ppl])
                     if self.environment.info_flag:
                         print("One person was detected at position: {}, for a total of {} people detected."
@@ -132,11 +132,11 @@ class Simulation:
                         speed=self.general_mission_parameters.speed,
                         vision=np.zeros(shape=(self.environment.X_pos.shape[0],
                                                self.environment.X_pos.shape[1])),
-                        radius_vision=(10*20/3)/self.environment.downsampling,  # Radius for vision (pixels)
+                        radius_vision=(10 * 20 / 3) / self.environment.downsampling,  # Radius for vision (pixels)
                         angular_vision=60,  # Degrees of vision (<180)
-                        #std_drone_speed=2/self.environment.downsampling,  # Standard deviation for the speed of the drone
-                        #std_drone_orientation=0/self.environment.downsampling,  # Standard deviation for the orientation of the drone
-                        #std_drone_direction=0/self.environment.downsampling,  # Standard deviation for the direction of the drone
+                        # std_drone_speed=2/self.environment.downsampling,  # Standard deviation for the speed of the drone
+                        # std_drone_orientation=0/self.environment.downsampling,  # Standard deviation for the orientation of the drone
+                        # std_drone_direction=0/self.environment.downsampling,  # Standard deviation for the direction of the drone
                         std_drone_speed=0.1,
                         std_drone_orientation=0.1,
                         std_drone_direction=0.1,
@@ -144,24 +144,25 @@ class Simulation:
                   for i in range(self.general_mission_parameters.num_drones)]
         return drones
 
-    def generate_people(self, max_person_speed=20/3, position=[]):
+    def generate_people(self, max_person_speed=20 / 3, position=[]):
         """
          Create the target structures
         :param position: generate certain position for each people
         :param max_person_speed: max speed of target
         :return: list of person
         """
-        if len(position)==0:
+        if len(position) == 0:
             people = [Person(index=i, orientation=0, speed=0, max_person_speed=max_person_speed,
                              corners=self.environment.corners, std_person=0)
-                  for i in range(self.general_mission_parameters.num_people)]
+                      for i in range(self.general_mission_parameters.num_people)]
         else:
             people = [Person(index=i, orientation=0, speed=0, max_person_speed=max_person_speed,
-                             corners=self.environment.corners, std_person=0, position = position[i])
-                  for i in range(self.general_mission_parameters.num_people)]
+                             corners=self.environment.corners, std_person=0, position=position[i])
+                      for i in range(self.general_mission_parameters.num_people)]
         return people
 
-    def __init__(self, mission_name='FreeFly', num_drones=6, num_people=3, person_position=[], plot_flag=False, info_flag=True,
+    def __init__(self, mission_name='FreeFly', num_drones=6, num_people=3, person_position=[], plot_flag=False,
+                 info_flag=True,
                  downsampling=6, max_time=900, drone_placement_pattern=0):
         """
         :param plot_flag:
@@ -178,19 +179,19 @@ class Simulation:
 
         self.environment = Environment(os.path.join(my_path, "./Kostas Research Center 2.png"),
                                        corners=np.array([[111, 408, 300, 7], [43, 127, 517, 435]]),
-                                       downsampling=downsampling,              # downsampling parameter
-                                       plot_flag=plot_flag,                    # plot flag
-                                       info_flag=info_flag,                    # Info flag
-                                       max_time=max_time)                      # max running time
+                                       downsampling=downsampling,  # downsampling parameter
+                                       plot_flag=plot_flag,  # plot flag
+                                       info_flag=info_flag,  # Info flag
+                                       max_time=max_time)  # max running time
         self.general_mission_parameters = \
             GeneralMissionParameters(name=mission_name,
                                      drone_placement_pattern=drone_placement_pattern,
                                      isDebug=False,
                                      accomplished=False,  # The mission has not been accomplished at the beginning
                                      distance_thres=5,
-                                     speed=(20/3)/self.environment.downsampling,  # Default speed for the drones,
-                                                        # equivalent to 1m/s
-                                                        #speed=(5/3)/self.environment.downsampling,
+                                     speed=(20 / 3) / self.environment.downsampling,  # Default speed for the drones,
+                                     # equivalent to 1m/s
+                                     # speed=(5/3)/self.environment.downsampling,
                                      num_simple_actions=6,  # Number of simple actions for the 'Random_action' mode
                                      num_people=num_people,
                                      num_drones=num_drones)
@@ -241,13 +242,13 @@ class Simulation:
                     if self.time_step == 0:
                         if self.environment.info_flag:
                             print("Drone {} is out of the KRI cage!"
-                                .format(drone_idx))
+                                  .format(drone_idx))
                     else:
                         self.reward.total -= self.reward.cost_crash
                         self.drones[drone_idx].reward -= self.reward.cost_crash
                         if self.environment.info_flag:
                             print("Drone {} crashed against the net"
-                                .format(drone_idx))
+                                  .format(drone_idx))
                     # If the drone is out of the range, disconnet from the net,
                     # stop it and turn of the camera
                     self.drones[drone_idx].status_net = False
@@ -272,7 +273,7 @@ class Simulation:
             if self.drones[drone_idx].vision_on:  # If the camera is on, but it can be off with some probability
                 self.drones[drone_idx].vision[(self.environment.X_pos - self.drones[drone_idx].position[0]) ** 2
                                               + (self.environment.Y_pos - self.drones[drone_idx].position[1]) ** 2
-                                              < self.drones[drone_idx].radius_vision ** 2] =\
+                                              < self.drones[drone_idx].radius_vision ** 2] = \
                     float(((np.sign(np.random.rand(1) - self.drones[drone_idx].p_camera_off) + 1) / 2))
                 if (180 <= np.mod(self.drones[drone_idx].orientation -
                                   self.drones[drone_idx].angular_vision / 2, 360)) and \
@@ -287,7 +288,7 @@ class Simulation:
                     self.drones[drone_idx].vision[
                         self.environment.Y_pos < np.tan(np.deg2rad(90 + self.drones[drone_idx].orientation -
                                                                    self.drones[drone_idx].angular_vision / 2)) * (
-                                    self.environment.X_pos - self.drones[drone_idx].position[0]) +
+                                self.environment.X_pos - self.drones[drone_idx].position[0]) +
                         self.drones[drone_idx].position[1]] = 0
                 if (0 <= np.mod(self.drones[drone_idx].orientation +
                                 self.drones[drone_idx].angular_vision / 2, 360)) and \
@@ -296,13 +297,13 @@ class Simulation:
                     self.drones[drone_idx].vision[
                         self.environment.Y_pos > np.tan(np.deg2rad(90 + self.drones[drone_idx].orientation +
                                                                    self.drones[drone_idx].angular_vision / 2)) * (
-                                    self.environment.X_pos - self.drones[drone_idx].position[0]) +
+                                self.environment.X_pos - self.drones[drone_idx].position[0]) +
                         self.drones[drone_idx].position[1]] = 0
                 else:
                     self.drones[drone_idx].vision[
                         self.environment.Y_pos < np.tan(np.deg2rad(90 + self.drones[drone_idx].orientation +
                                                                    self.drones[drone_idx].angular_vision / 2)) * (
-                                    self.environment.X_pos - self.drones[drone_idx].position[0]) +
+                                self.environment.X_pos - self.drones[drone_idx].position[0]) +
                         self.drones[drone_idx].position[1]] = 0
                 if self.environment.plot_flag:
                     self.drones[drone_idx].plot_vision()
@@ -333,13 +334,13 @@ class Simulation:
                 num_ppl_detected = np.sum(detection_distribution)
                 true_detected_people = []
                 for i in range(len(detection_distribution)):
-                    if detection_distribution[i]==1:
+                    if detection_distribution[i] == 1:
                         true_detected_people.append(position_people[i])
                 self.general_mission_parameters.position_people = true_detected_people
                 # self.general_mission_parameters.position_people = position_people[np.nonzero(detection_distribution)]
                 if self.environment.info_flag:
                     print("Drone {} detected {} people out of {} objects detected"
-                        .format(drone_idx, int(num_ppl_detected), detected_objects))
+                          .format(drone_idx, int(num_ppl_detected), detected_objects))
                 if num_ppl_detected > 0:
                     for person in self.person:
                         if tuple(person.position) in true_detected_people and person.detected is False:
@@ -372,7 +373,8 @@ class Simulation:
                 if not ((self.drones[drone_idx].mode.actual == 'Disarm') or (
                         self.drones[drone_idx].mode.actual == 'Arm')):  # If the drone is flying
                     # Same orientation plus a random from N(0,1)
-                    self.drones[drone_idx].orientation += self.drones[drone_idx].std_drone_orientation * np.random.normal()
+                    self.drones[drone_idx].orientation += self.drones[
+                                                              drone_idx].std_drone_orientation * np.random.normal()
                     # Same direction plus a random from N(0,1)
                     self.drones[drone_idx].direction += self.drones[drone_idx].std_drone_direction * np.random.normal()
                     # If the drone changed the flying mode, do not move while planning the new mode
@@ -416,14 +418,14 @@ class Simulation:
 
         # Provide both individual rewards and the team reward
         rewards = [drone.reward for drone in self.drones]
-        #rewards.append(team_reward)
+        # rewards.append(team_reward)
         rewards.append(0)
         return observations, rewards, is_done
 
     def is_mission_done(self):
         all_drones_off = len([drone for drone in self.drones if drone.mode.actual == 'Off']) == len(self.drones)
         is_done = self.general_mission_parameters.accomplished or all_drones_off or \
-                    self.time_step >= self.environment.max_time
+                  self.time_step >= self.environment.max_time
         return is_done
 
     def render(self):
@@ -457,7 +459,6 @@ class Simulation:
             self.drones[drone_idx].plot_vision()
             self.drones[drone_idx].plot_velocity()
 
-
         plt.title("Time step {}".format(self.time_step), fontsize=16)
         plt.xlabel("Total Reward {:.3f}".format(self.reward.total), fontsize=16)
 
@@ -478,13 +479,14 @@ if __name__ == "__main__":
     parse.add_argument('--max_time', type=int, default=900, help="max running time")
     parse.add_argument('--plot_flag', type=str, default='True', help="plotting flag")
     parse.add_argument('--info_flag', type=str, default='True', help="info flag")
-    parse.add_argument('--drone_placement_pattern',type=int, default=3,
+    parse.add_argument('--drone_placement_pattern', type=int, default=3,
                        help="""drone_placement_pattern:  ##\n\
                        ##0 --> Random position within the cage\n\
                        ##1 --> Distributed over one edge\n\
                        ##2 --> Distributed over all edges\n\
                        ##3 --> Starting from one corner\n\
                        ##4 --> Starting from all corners""")
+    parse.add_argument('--debug', type=bool, default=False, help="If is in debug mode, the person position is fixed")
     args = parse.parse_args()
     # Simutation begin
     """
@@ -495,10 +497,13 @@ if __name__ == "__main__":
         3 --> Starting from one corner
         4 --> Starting from all corner
     """
-
+    if args.debug:
+        person_position = [(15, 20), (20, 25), (20, 20)]
+    else:
+        person_position = []
     simulation = Simulation(mission_name='Random_action',
                             num_drones=args.num_drones,
-                            num_people=3,  person_position=[(15, 20), (20, 25), (20, 20)],
+                            num_people=3, person_position=person_position,
                             plot_flag=eval(args.plot_flag),
                             info_flag=eval(args.info_flag),
                             max_time=args.max_time,

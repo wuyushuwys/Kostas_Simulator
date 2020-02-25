@@ -21,7 +21,7 @@ class Person:
         self.m4 = (self.corners[1][3] - self.corners[1][0]) / (self.corners[0][3] - self.corners[0][0])
         # generate in cage random position
         in_cage = 0
-        if len(position)==0:
+        if len(position) == 0:
             while in_cage == 0:
                 self.position = np.array([np.random.randint(min(self.corners[0]), max(self.corners[0])),
                                           np.random.randint(min(self.corners[0]) + 1 / 4 * max(self.corners[1]),
