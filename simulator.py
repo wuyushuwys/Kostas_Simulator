@@ -191,7 +191,7 @@ class Simulation:
                                      drone_placement_pattern=drone_placement_pattern,
                                      isDebug=False,
                                      accomplished=False,  # The mission has not been accomplished at the beginning
-                                     distance_thres=1/ self.environment.downsampling,
+                                     distance_thres=1 / self.environment.downsampling,
                                      speed=(20 / 3) / self.environment.downsampling,  # Default speed for the drones,
                                      # equivalent to 1m/s
                                      # speed=(5/3)/self.environment.downsampling
@@ -479,6 +479,9 @@ if __name__ == "__main__":
     parse = argparse.ArgumentParser(description="Kostas Simulator",
                                     usage='use "%(prog)s --help" for more information',
                                     formatter_class=argparse.RawTextHelpFormatter)
+    parse.add_argument('--mission_name', type=str, default="Random_action", help="RTL --> return to launch\n"
+                                                                                 "FreeFly\nRaster_motion"
+                                                                                 "\nRandom_action\nLoiter")
     parse.add_argument('--num_drones', type=int, default=3, help="number of drones")
     parse.add_argument('--max_time', type=int, default=900, help="max running time")
     parse.add_argument('--plot_flag', type=str, default='True', help="plotting flag")
@@ -501,11 +504,20 @@ if __name__ == "__main__":
         3 --> Starting from one corner
         4 --> Starting from all corner
     """
+    """
+    mission: 
+        RTL --> return to launch
+        FreeFly
+        Raster_motion
+        Random_action
+        Loiter
+    
+    """
     if args.debug:
         person_position = [(15, 20), (20, 25), (20, 20)]
     else:
         person_position = []
-    simulation = Simulation(mission_name='Raster_motion',
+    simulation = Simulation(mission_name=args.mission_name,
                             num_drones=args.num_drones,
                             num_people=3, person_position=person_position,
                             plot_flag=eval(args.plot_flag),
