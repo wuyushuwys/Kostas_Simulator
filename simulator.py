@@ -137,12 +137,12 @@ class Simulation:
                         angular_vision=60,  # Degrees of vision (<180)
                         home=self.general_mission_parameters.drone_home_position,
                         mission_strat_position=self.general_mission_parameters.mission_start_position[i],
-                        # std_drone_speed=2/self.environment.downsampling,  # Standard deviation for the speed of the drone
+                        # std_drone_speed=2,  # Standard deviation for the speed of the drone
                         # std_drone_orientation=0/self.environment.downsampling,  # Standard deviation for the orientation of the drone
-                        # std_drone_direction=0/self.environment.downsampling,  # Standard deviation for the direction of the drone
-                        std_drone_speed=0,
-                        std_drone_orientation=0,
-                        std_drone_direction=0,
+                        # std_drone_dire/self.environment.downsamplingction=0/self.environment.downsampling,  # Standard deviation for the direction of the drone
+                        std_drone_speed=0.1,
+                        std_drone_orientation=0.1,
+                        std_drone_direction=0.1,
                         vision_on=True, corners=self.environment.corners)
                   for i in range(self.general_mission_parameters.num_drones)]
         return drones
@@ -382,8 +382,7 @@ class Simulation:
                     # Same direction plus a random from N(0,1)
                     self.drones[drone_idx].direction += self.drones[drone_idx].std_drone_direction * np.random.normal()
                     # If the drone changed the flying mode, do not move while planning the new mode
-                    self.drones[drone_idx].speed = self.drones[drone_idx].speed + \
-                                                   self.drones[drone_idx].std_drone_speed * np.random.normal(0, 1)
+                    self.drones[drone_idx].speed += self.drones[drone_idx].std_drone_speed * np.random.normal()
                     if self.drones[drone_idx].mode.previous == self.drones[drone_idx].mode.actual:
                         # New position = previous position + speed/s x 1s
                         self.drones[drone_idx].position = self.drones[drone_idx].position + np.array(

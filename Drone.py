@@ -61,10 +61,15 @@ class Drone:
 
         self.radius_vision = radius_vision  # Radius for vision (pixels)
         self.angular_vision = angular_vision  # Degrees of vision (<180)
-        # self.std_drone = std_drone  # Standard deviation for the movement of the drone
-        self.std_drone_speed = std_drone_speed  # Standard deviation for the speed of the drone
-        self.std_drone_direction = std_drone_direction  # Standard deviation for the direction of the drone
-        self.std_drone_orientation = std_drone_orientation  # Standard deviation for the orientation of the drone
+        if mode.actual is not "Raster_motion":
+            # self.std_drone = std_drone  # Standard deviation for the movement of the drone
+            self.std_drone_speed = std_drone_speed  # Standard deviation for the speed of the drone
+            self.std_drone_direction = std_drone_direction  # Standard deviation for the direction of the drone
+            self.std_drone_orientation = std_drone_orientation  # Standard deviation for the orientation of the drone
+        else:
+            self.std_drone_speed = 0  # Standard deviation for the speed of the drone
+            self.std_drone_direction = 0  # Standard deviation for the direction of the drone
+            self.std_drone_orientation = 0  # Standard deviation for the orientation of the drone
 
         # Probability parameters
         self.p_disconnection = p_disconnection  # Probability the drone disconnects the net
@@ -84,6 +89,7 @@ class Drone:
             self.is_init = True
             self.is_right = False
             self.is_left = False
+            self.up_angle = 190
 
     def home_position(self, placed_pattern, downsampling):
         """
@@ -351,7 +357,7 @@ class Drone:
                     print("Drone #{} arriving mission starting point. Raster motion start.".format(self.index))
                     self.is_mission_start = True
             else:
-                threshold = 6.66 / self.downsampling * 0.75 * self.radius_vision * np.sin(
+                threshold = 6.66 / self.downsampling * 0.5 * self.radius_vision * np.sin(
                     np.deg2rad(self.angular_vision) / 2) / self.speed
                 if self.is_init:
                     self.current_raster_step = self.total_raster_step
@@ -392,8 +398,7 @@ class Drone:
                             self.direction = 105
                             self.orientation = self.direction
                             self.speed = mission_parameters.speed
-
-
+                        self.current_raster_step = self.total_raster_step
         else:
             pass
 
