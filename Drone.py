@@ -79,7 +79,7 @@ class Drone:
         if mode.actual is 'Raster_motion':
             self.is_mission_start = False
             self.total_raster_step = round(
-                self.radius_vision * np.sin(np.deg2rad(self.angular_vision) / 2) / self.speed) - 1
+                self.radius_vision * np.sin(np.deg2rad(self.angular_vision) / 2) / self.speed)
             self.current_raster_step = 0
             self.is_init = True
             self.is_right = False

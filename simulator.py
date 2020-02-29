@@ -480,8 +480,13 @@ if __name__ == "__main__":
                                     usage='use "%(prog)s --help" for more information',
                                     formatter_class=argparse.RawTextHelpFormatter)
     parse.add_argument('--mission_name', type=str, default="Random_action", help="RTL --> return to launch\n"
-                                                                                 "FreeFly\nRaster_motion"
-                                                                                 "\nRandom_action\nLoiter")
+                                                                                 "FreeFly\n"
+                                                                                 "Raster_motion --> in Raster Motion, "
+                                                                                 "drone will fly to uniformly "
+                                                                                 "distributed position along a "
+                                                                                 "boundary\n "
+                                                                                 "Random_action\n"
+                                                                                 "Loiter")
     parse.add_argument('--num_drones', type=int, default=3, help="number of drones")
     parse.add_argument('--max_time', type=int, default=900, help="max running time")
     parse.add_argument('--plot_flag', type=str, default='True', help="plotting flag")
@@ -495,7 +500,7 @@ if __name__ == "__main__":
                        ##4 --> Starting from all corners""")
     parse.add_argument('--debug', type=bool, default=False, help="If is in debug mode, the person position is fixed")
     args = parse.parse_args()
-    # Simutation begin
+    # Simulation begin
     """
     drone_placement_pattern:
         0 --> Random position within the cage

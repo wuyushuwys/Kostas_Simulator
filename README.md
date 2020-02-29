@@ -1,5 +1,10 @@
 # Kostas Simulator for Drone
 
+### v1.3 (29-February-2020)
+- Add Raster Motion Mission
+  - in raster motion, drone will fly to uniformly distributed position along a boundary
+- Add `mission_name` parser
+
 ### V1.2 (25-February-2020) 
 - Add crash prevention funtionality for keeping drone crashing in the boundaries. 
 - The drone will still crash because of the randomness(like the wind in the real world), but not the policies.
