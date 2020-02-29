@@ -20,7 +20,7 @@ class Drone:
             self.parameters_detection = parameters_detection
 
     def __init__(self, placed_pattern=0, dowmsampling=6, index=0, status_net=True, mode=Mode(),
-                 home=np.array([]), orientation=0,
+                 home=np.array([]), mission_strat_position=np.array([]), orientation=0,
                  speed=0.0, vision=np.array([]), vision_on=True, corners=np.array([]),
                  radius_vision=0.0, angular_vision=0.0,
                  std_drone_speed=0.0, std_drone_direction=0.0, std_drone_orientation=0.0,
@@ -50,7 +50,8 @@ class Drone:
         if len(home) == 0:
             self.home_position(placed_pattern, dowmsampling)
         else:
-            self.home = np.array(home)
+            self.home = np.array(home[index])
+        self.mission_strat_position = mission_strat_position
         self.position = self.home
         self.direction = orientation
         self.orientation = orientation
@@ -75,6 +76,14 @@ class Drone:
 
         # General parameters
         self.downsampling = dowmsampling
+        if mode.actual is 'Raster_motion':
+            self.is_mission_start = False
+            self.total_raster_step = round(
+                self.radius_vision * np.sin(np.deg2rad(self.angular_vision) / 2) / self.speed) - 1
+            self.current_raster_step = 0
+            self.is_init = True
+            self.is_right = False
+            self.is_left = False
 
     def home_position(self, placed_pattern, downsampling):
         """
@@ -274,8 +283,11 @@ class Drone:
 
     def goto(self, general_mission_parameters):
         near = 0
+        if self.mode.actual is "Raster_motion":
+            self.mode.parameters_destination = self.mission_strat_position
         self.direction = np.rad2deg(np.arctan2(self.mode.parameters_destination[1] - self.position[1],
                                                self.mode.parameters_destination[0] - self.position[0])) + 90
+        self.orientation = self.direction
         if np.linalg.norm(self.position - self.mode.parameters_destination) < self.speed:
             self.speed = np.linalg.norm(self.position - self.mode.parameters_destination)
         if np.linalg.norm(
@@ -311,14 +323,13 @@ class Drone:
         elif self.mode.actual is 'Loiter':  # Keep the drone flying at its current position
             near = self.goto(mission_parameters)
             self.speed = 0
-
         # Define the basic random actions: front, back, right, left, rotation +90, -90, 180
         elif self.mode.actual is 'Random_action':
             # if mission_parameters.isDebug:
             #    drone_action_id = np.random.randint(mission_parameters.num_simple_actions)
             # else:
             #    drone_action_id = mission_parameters.action_id[self.index]
-            if np.min(self.distance) < 6 / self.downsampling:
+            if np.min(self.distance) < 6.66 / self.downsampling:
                 idx = np.argmin(self.distance)
                 drone_action_id = idx + (-1) ** idx
             else:
@@ -330,6 +341,59 @@ class Drone:
         elif self.mode.actual is 'FreeFly':
             drone_action_id = mission_parameters.action_id[self.index]
             self.simple_action(drone_action_id, mission_parameters)
+        elif self.mode.actual is 'Raster_motion':
+            if not self.is_mission_start:
+                near = self.goto(mission_parameters)
+                if near:
+                    self.speed = mission_parameters.speed
+                    self.direction = 105
+                    self.orientation = self.direction
+                    print("Drone #{} arriving mission starting point. Raster motion start.".format(self.index))
+                    self.is_mission_start = True
+            else:
+                threshold = 6.66 / self.downsampling * 0.75 * self.radius_vision * np.sin(
+                    np.deg2rad(self.angular_vision) / 2) / self.speed
+                if self.is_init:
+                    self.current_raster_step = self.total_raster_step
+                    self.direction = 105
+                    self.orientation = self.direction
+                    self.speed = mission_parameters.speed
+                    if self.distance[1] > threshold and self.distance[3] > threshold:
+                        self.is_init = False
+
+                else:
+                    if self.distance[1] < threshold or self.distance[3] < threshold:
+                        if self.current_raster_step != 0:
+                            self.is_right = False
+                            self.is_left = False
+                            self.current_raster_step -= 1
+                            self.direction = 195
+                            self.orientation = self.direction
+                            self.speed = mission_parameters.speed
+                        else:
+                            if self.distance[1] < threshold:
+                                self.is_right = True
+                                self.direction = 285
+                                self.orientation = self.direction
+                                self.speed = mission_parameters.speed
+                            elif self.distance[3] < threshold:
+                                self.is_left = True
+                                self.direction = 105
+                                self.orientation = self.direction
+                                self.speed = mission_parameters.speed
+                            self.current_raster_step = self.total_raster_step
+
+                    else:
+                        if self.is_right:
+                            self.direction = 285
+                            self.orientation = self.direction
+                            self.speed = mission_parameters.speed
+                        elif self.is_left:
+                            self.direction = 105
+                            self.orientation = self.direction
+                            self.speed = mission_parameters.speed
+
+
         else:
             pass
 

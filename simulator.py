@@ -1,7 +1,7 @@
 #!/usr/bin/env/python3
 import numpy as np
 import matplotlib.pyplot as plt
-from time import time
+from time import time, sleep
 import argparse
 import os.path
 from Environment import Environment
@@ -98,7 +98,9 @@ class Simulation:
                                 if self.environment.info_flag:
                                     print("Package sent frone drone {} to drone {} was lost"
                                           .format(drone_idx, idx))
-        elif self.general_mission_parameters.name == "Random_action" or self.general_mission_parameters.name == 'FreeFly':
+        elif self.general_mission_parameters.name == "Random_action" \
+                or self.general_mission_parameters.name == 'FreeFly' \
+                or self.general_mission_parameters.name == "Raster_motion":
             self.drones[drone_idx].mode.parameters_detection = 0
             for idx_ppl in range(len(self.general_mission_parameters.position_people)):
                 if self.general_mission_parameters.position_people[idx_ppl] not in \
@@ -127,19 +129,20 @@ class Simulation:
         drones = [Drone(dowmsampling=self.environment.downsampling, index=i, status_net=True,
                         placed_pattern=self.general_mission_parameters.drone_placement_pattern,
                         mode=Drone.Mode(previous='FreeFly',
-                                        actual=self.general_mission_parameters.mission_actual,
-                                        parameters_destination=np.array([])),
+                                        actual=self.general_mission_parameters.mission_actual),
                         speed=self.general_mission_parameters.speed,
                         vision=np.zeros(shape=(self.environment.X_pos.shape[0],
                                                self.environment.X_pos.shape[1])),
                         radius_vision=(10 * 20 / 3) / self.environment.downsampling,  # Radius for vision (pixels)
                         angular_vision=60,  # Degrees of vision (<180)
+                        home=self.general_mission_parameters.drone_home_position,
+                        mission_strat_position=self.general_mission_parameters.mission_start_position[i],
                         # std_drone_speed=2/self.environment.downsampling,  # Standard deviation for the speed of the drone
                         # std_drone_orientation=0/self.environment.downsampling,  # Standard deviation for the orientation of the drone
                         # std_drone_direction=0/self.environment.downsampling,  # Standard deviation for the direction of the drone
-                        std_drone_speed=0.1,
-                        std_drone_orientation=0.1,
-                        std_drone_direction=0.1,
+                        std_drone_speed=0,
+                        std_drone_orientation=0,
+                        std_drone_direction=0,
                         vision_on=True, corners=self.environment.corners)
                   for i in range(self.general_mission_parameters.num_drones)]
         return drones
@@ -188,13 +191,14 @@ class Simulation:
                                      drone_placement_pattern=drone_placement_pattern,
                                      isDebug=False,
                                      accomplished=False,  # The mission has not been accomplished at the beginning
-                                     distance_thres=5,
+                                     distance_thres=1/ self.environment.downsampling,
                                      speed=(20 / 3) / self.environment.downsampling,  # Default speed for the drones,
                                      # equivalent to 1m/s
-                                     # speed=(5/3)/self.environment.downsampling,
+                                     # speed=(5/3)/self.environment.downsampling
                                      num_simple_actions=6,  # Number of simple actions for the 'Random_action' mode
                                      num_people=num_people,
-                                     num_drones=num_drones)
+                                     num_drones=num_drones,
+                                     environment=self.environment)
         self.drones = self.generate_drones()
         self.person = self.generate_people(position=person_position)
         self.reward = Reward()
@@ -475,7 +479,7 @@ if __name__ == "__main__":
     parse = argparse.ArgumentParser(description="Kostas Simulator",
                                     usage='use "%(prog)s --help" for more information',
                                     formatter_class=argparse.RawTextHelpFormatter)
-    parse.add_argument('--num_drones', type=int, default=6, help="number of drones")
+    parse.add_argument('--num_drones', type=int, default=3, help="number of drones")
     parse.add_argument('--max_time', type=int, default=900, help="max running time")
     parse.add_argument('--plot_flag', type=str, default='True', help="plotting flag")
     parse.add_argument('--info_flag', type=str, default='True', help="info flag")
@@ -501,7 +505,7 @@ if __name__ == "__main__":
         person_position = [(15, 20), (20, 25), (20, 20)]
     else:
         person_position = []
-    simulation = Simulation(mission_name='Random_action',
+    simulation = Simulation(mission_name='Raster_motion',
                             num_drones=args.num_drones,
                             num_people=3, person_position=person_position,
                             plot_flag=eval(args.plot_flag),
