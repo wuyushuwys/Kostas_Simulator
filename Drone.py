@@ -61,15 +61,10 @@ class Drone:
 
         self.radius_vision = radius_vision  # Radius for vision (pixels)
         self.angular_vision = angular_vision  # Degrees of vision (<180)
-        if mode.actual is not "Raster_motion":
-            # self.std_drone = std_drone  # Standard deviation for the movement of the drone
-            self.std_drone_speed = std_drone_speed  # Standard deviation for the speed of the drone
-            self.std_drone_direction = std_drone_direction  # Standard deviation for the direction of the drone
-            self.std_drone_orientation = std_drone_orientation  # Standard deviation for the orientation of the drone
-        else:
-            self.std_drone_speed = 0  # Standard deviation for the speed of the drone
-            self.std_drone_direction = 0  # Standard deviation for the direction of the drone
-            self.std_drone_orientation = 0  # Standard deviation for the orientation of the drone
+        self.std_drone_speed = std_drone_speed  # Standard deviation for the speed of the drone
+        self.std_drone_direction = std_drone_direction  # Standard deviation for the direction of the drone
+        self.std_drone_orientation = std_drone_orientation  # Standard deviation for the orientation of the drone
+
 
         # Probability parameters
         self.p_disconnection = p_disconnection  # Probability the drone disconnects the net
@@ -358,7 +353,7 @@ class Drone:
                     self.is_mission_start = True
             else:
                 threshold = 6.66 / self.downsampling * 0.5 * self.radius_vision * np.sin(
-                    np.deg2rad(self.angular_vision) / 2) / self.speed
+                    np.deg2rad(self.angular_vision) / 2) / mission_parameters.speed
                 if self.is_init:
                     self.current_raster_step = self.total_raster_step
                     self.direction = 105
